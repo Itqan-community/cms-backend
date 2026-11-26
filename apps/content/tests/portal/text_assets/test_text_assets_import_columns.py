@@ -142,6 +142,25 @@ class ImportColumnsPreviewApiTest(TextAssetVersionBaseTest):
         self.assertEqual("content_file_unparseable", body["error_name"])
         self.assertIn("first row must be its header row", body["message"])
 
+    def test_preview_import_columns_where_mapping_sent_should_flag_text_rows_before_data(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+        content = b"chapter,verse,meaning\n,,lost content\n1,1,x\n"
+
+        # Act
+        response = self.client.post(
+            self._url(),
+            data={
+                "file": SimpleUploadedFile("t.csv", content),
+                "column_mapping": json.dumps({"surah": 0, "ayah": 1, "text": 2}),
+            },
+        )
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual([2], response.json()["attention_rows"])
+
     def test_preview_import_columns_where_slug_unknown_should_return_text_asset_not_found(self):
         # Arrange
         self.authenticate_user(self.user)

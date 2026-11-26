@@ -77,12 +77,34 @@ class ColumnsPreviewTests(QuranDataMixin, BaseTestCase):
         raw = b"chapter,verse,meaning\n,,lost content\n1,2,Praise\n"
 
         # Act
-        preview = preview_content_columns(raw, self.spec, ["text"], truncated=False)
+        preview = preview_content_columns(
+            raw, self.spec, ["text"], truncated=False, column_mapping={"surah": 0, "ayah": 1, "text": 2}
+        )
 
         # Assert
         self.assertEqual(preview.header_row, 1)
         self.assertEqual(preview.headers, ["chapter", "verse", "meaning"])
         self.assertEqual(preview.attention_rows, [2])
+
+    def test_preview_content_columns_where_text_column_holds_a_number_should_keep_scanning(self):
+        # Arrange — "123" sits in the text column: rows 2 and 3 have no unit values
+        raw = b"surah,ayah,text\n,,123\n,,lost\n1,2,Praise\n"
+
+        # Act
+        preview = preview_content_columns(raw, self.spec, ["text"], truncated=False)
+
+        # Assert
+        self.assertEqual(preview.attention_rows, [2, 3])
+
+    def test_preview_content_columns_where_unit_columns_unknown_should_report_no_attention_rows(self):
+        # Arrange — nothing matched by name and no mapping sent yet
+        raw = b"chapter,verse,meaning\n,,lost content\n1,2,Praise\n"
+
+        # Act
+        preview = preview_content_columns(raw, self.spec, ["text"], truncated=False)
+
+        # Assert
+        self.assertEqual(preview.attention_rows, [])
 
     def test_preview_content_columns_where_truncated_should_drop_the_cut_line(self):
         # Arrange
@@ -300,6 +322,24 @@ class ColumnMappingImportTests(QuranDataMixin, BaseTestCase):
 
         # Assert
         self.assertEqual(raised.exception.rows, {2: "unreadable"})
+
+    def test_parse_content_file_where_text_column_holds_a_number_before_data_should_report_both_rows(self):
+        # Arrange
+        raw = b"surah,ayah,text\n,,123\n,,lost\n1,2,Praise\n"
+
+        # Act
+        with self.assertRaises(AssetContentInvalidRowsError) as raised:
+            parse_content_file(
+                raw,
+                self.spec,
+                self.asset,
+                column_keys=["text"],
+                strict=True,
+                column_mapping={"surah": 0, "ayah": 1, "text": 2},
+            )
+
+        # Assert
+        self.assertEqual(raised.exception.rows, {2: "unreadable", 3: "unreadable"})
 
     def test_parse_content_file_where_mapping_and_preamble_above_header_should_reject_the_file(self):
         # Arrange

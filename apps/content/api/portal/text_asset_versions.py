@@ -216,7 +216,9 @@ class ImportColumnsPreviewOut(Schema):
     # The auto-matched fields already cover a required list.
     complete: bool
     # Text rows between the header and the first data row (1-based); a strict
-    # import rejects them, so the uploader should fix them first.
+    # import rejects them, so the uploader should fix them first. Judged by the
+    # sent `column_mapping`, else the name-matched columns when they cover every
+    # required field; empty until the unit columns are known.
     attention_rows: list[int] = []
 
 
@@ -230,9 +232,12 @@ class NewAssetImportColumnsIn(Schema):
     template: AssetTemplateChoice
     # The columns the create form will send (`columns`); just `text` when omitted.
     columns: Json[list[ImportColumnIn]] | None = None
+    column_mapping: str | None = Field(default=None, description=COLUMN_MAPPING_DESCRIPTION)
 
 
-def _import_columns_out(file: UploadedFile, spec: UnitSpec, columns: list) -> dict:
+def _import_columns_out(
+    file: UploadedFile, spec: UnitSpec, columns: list, column_mapping: dict[str, int | None] | None = None
+) -> dict:
     """Preview ``file``'s header row for ``columns`` (objects with key and labels).
 
     Only the first 64 KB are read (clients may send just that slice), so a large
@@ -245,6 +250,7 @@ def _import_columns_out(file: UploadedFile, spec: UnitSpec, columns: list) -> di
             spec,
             [column.key for column in columns],
             truncated=len(prefix) > PREVIEW_BYTES,
+            column_mapping=column_mapping,
         )
     except AssetContentHeaderNotFirstError as exc:
         raise header_not_first_error() from exc
@@ -314,7 +320,12 @@ def list_text_asset_versions(request: Request, text_asset_slug: str, language: s
     },
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_READ_TEXT_ASSET)])
-def preview_import_columns(request: Request, text_asset_slug: str, file: UploadedFile = File(...)):
+def preview_import_columns(
+    request: Request,
+    text_asset_slug: str,
+    file: UploadedFile = File(...),
+    column_mapping: str | None = Form(None, description=COLUMN_MAPPING_DESCRIPTION),
+):
     """Read a content file's header row, auto-match it to the asset's fields and
     list what still needs a column, so the uploader can map the rest."""
     try:
@@ -325,7 +336,9 @@ def preview_import_columns(request: Request, text_asset_slug: str, file: Uploade
             message=_("Text asset with slug {slug} not found.").format(slug=text_asset_slug),
             status_code=404,
         ) from exc
-    return _import_columns_out(file, unit_spec_for(asset), asset.text_columns())
+    return _import_columns_out(
+        file, unit_spec_for(asset), asset.text_columns(), column_mapping_from_form(column_mapping)
+    )
 
 
 @router.post(
@@ -345,7 +358,9 @@ def preview_new_asset_import_columns(
     come from the chosen template and the columns the form will create."""
     columns = data.columns or [ImportColumnIn(key=DEFAULT_COLUMN_KEY)]
     AssetColumnService.validate_new_keys([column.key for column in columns])
-    return _import_columns_out(file, unit_spec_for_template(data.template), columns)
+    return _import_columns_out(
+        file, unit_spec_for_template(data.template), columns, column_mapping_from_form(data.column_mapping)
+    )
 
 
 @router.post(

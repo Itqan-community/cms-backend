@@ -479,15 +479,30 @@ def _locate_header_row(rows: list[list[str]]) -> int:
     return index
 
 
-def _attention_rows(rows: list[list[str]], header_index: int) -> list[int]:
-    """1-based numbers of the non-blank rows between the header and the first
-    data row: a strict import reports them, so the preview points them out."""
+def _attention_rows(
+    rows: list[list[str]],
+    header_index: int,
+    mapping: dict[str, int] | None,
+    required: list[list[str]],
+    unit_fields: list[str],
+) -> list[int]:
+    """1-based numbers of the rows between the header and the first data row
+    that carry text: a strict import reports them, so the preview points them out.
+
+    A data row is one whose mapped unit columns all hold numbers (the parsers'
+    test), so a number in a text column does not end the scan. Only known once
+    the unit columns are: without an effective ``mapping`` nothing is reported.
+    """
+    covered = next((fields for fields in required if mapping and all(key in mapping for key in fields)), None)
+    if covered is None:
+        return []
+    units = [mapping[key] for key in covered if key in unit_fields]
     found: list[int] = []
     for index in range(header_index + 1, min(len(rows), header_index + 1 + _HEADER_SCAN_ROWS)):
         row = rows[index]
         if not any((cell or "").strip() for cell in row):
             continue
-        if not _could_be_header(row):
+        if all(column < len(row) and _is_unit_number(row[column]) for column in units):
             break
         found.append(index + 1)
     return found
@@ -557,7 +572,12 @@ class ColumnsPreview:
 
 
 def preview_content_columns(
-    prefix: bytes, spec: UnitSpec, column_keys: list[str], *, truncated: bool
+    prefix: bytes,
+    spec: UnitSpec,
+    column_keys: list[str],
+    *,
+    truncated: bool,
+    column_mapping: dict[str, int | None] | None = None,
 ) -> ColumnsPreview:
     """Read the header row and a few sample rows from the start of a file.
 
@@ -565,6 +585,10 @@ def preview_content_columns(
     file goes on, so its last, possibly cut, line is dropped (cutting at a line
     break also keeps a multi-byte character whole). The rest of the file is
     never read.
+
+    ``column_mapping`` (the one the upload will send) is what ``attention_rows``
+    are judged by; without it, the name-matched columns when they cover every
+    required field (the upload then needs no mapping), else none are reported.
     """
     if truncated:
         end = prefix.rfind(b"\n")
@@ -576,13 +600,17 @@ def preview_content_columns(
     # mapping, so it keeps the name-matching header search (a preamble above the
     # header is fine there). Only a file that needs a mapping gets the mapping's
     # strict rule: the header is the first row.
-    header_index = next(
-        (
-            index
-            for index, row in enumerate(rows[:_HEADER_SCAN_ROWS])
-            if _complete(_auto_mapping(row, aliases), required)
-        ),
-        None,
+    header_index = (
+        None
+        if column_mapping is not None
+        else next(
+            (
+                index
+                for index, row in enumerate(rows[:_HEADER_SCAN_ROWS])
+                if _complete(_auto_mapping(row, aliases), required)
+            ),
+            None,
+        )
     )
     if header_index is None:
         # The same rule as a mapped import, on a prefix that may end before any data row.
@@ -593,14 +621,22 @@ def preview_content_columns(
         for row in rows[header_index + 1 : header_index + 1 + _HEADER_SCAN_ROWS]
         if any((cell or "").strip() for cell in row)
     ][:_SAMPLE_ROWS]
+    unit_fields = list(_unit_aliases(spec))
+    auto = _auto_mapping(rows[header_index], aliases)
+    if column_mapping is not None:
+        effective: dict[str, int] | None = {
+            key: index for key, index in column_mapping.items() if isinstance(index, int) and key in aliases
+        }
+    else:
+        effective = auto if _complete(auto, required) else None
     return ColumnsPreview(
         header_row=header_index + 1,
         headers=header,
         samples=samples,
-        unit_fields=list(_unit_aliases(spec)),
+        unit_fields=unit_fields,
         required=required,
-        mapping=_auto_mapping(rows[header_index], aliases),
-        attention_rows=_attention_rows(rows, header_index),
+        mapping=auto,
+        attention_rows=_attention_rows(rows, header_index, effective, required, unit_fields),
     )
 
 
