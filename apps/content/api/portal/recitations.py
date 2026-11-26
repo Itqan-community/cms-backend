@@ -12,6 +12,7 @@ from apps.content.models import (
     Asset,
     CategoryChoice,
     LicenseChoice,
+    RecitationAyahTiming,
     RecitationQuality,
     Riwayah,
     StatusChoice,
@@ -20,6 +21,12 @@ from apps.content.models import (
 from apps.content.services.recitation import RecitationService
 from apps.content.services.recitation_quality_resolution import sorted_asset_qualities
 from apps.content.timing_coverage import TimingCoverageOut, timing_coverage_subqueries
+from apps.content.timing_level import (
+    TIMING_LEVEL_DESCRIPTION,
+    TimingLevel,
+    has_ayah_timings_exists,
+    timing_level,
+)
 from apps.core.mixins.storage import absolute_file_url
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.ordering_base import ordering
@@ -92,12 +99,18 @@ class RecitationListOut(TimingCoverageOut):
     status: StatusChoice
     thumbnail_url: str | None = None
     created_at: AwareDatetime
+    timing_level: TimingLevel | None = Field(None, description=TIMING_LEVEL_DESCRIPTION)
 
     @staticmethod
     def resolve_thumbnail_url(obj: Asset) -> str | None:
         if obj.thumbnail_url:
             return obj.thumbnail_url.url
         return None
+
+    @staticmethod
+    def resolve_timing_level(obj: Asset) -> TimingLevel | None:
+        # The coverage annotation already counts timed ayahs: no extra query.
+        return timing_level((getattr(obj, "timed_ayahs_count", 0) or 0) > 0)
 
 
 class RecitationDetailOut(Schema):
@@ -128,6 +141,7 @@ class RecitationDetailOut(Schema):
     updated_at: AwareDatetime
     ayah_timings_url: AbsoluteUrl | None = None
     qualities: list[QualityOut] = []
+    timing_level: TimingLevel | None = Field(None, description=TIMING_LEVEL_DESCRIPTION)
 
     @staticmethod
     def resolve_thumbnail_url(obj: Asset) -> str | None:
@@ -138,6 +152,14 @@ class RecitationDetailOut(Schema):
     @staticmethod
     def resolve_qualities(obj: Asset) -> list[RecitationQuality]:
         return sorted_asset_qualities(obj)
+
+    @staticmethod
+    def resolve_timing_level(obj: Asset) -> TimingLevel | None:
+        # Annotated on retrieve; write endpoints return one unannotated row, so one query.
+        has_timings = getattr(obj, "has_ayah_timings", None)
+        if has_timings is None:
+            has_timings = RecitationAyahTiming.objects.filter(track__asset=obj).exists()
+        return timing_level(has_timings)
 
     @staticmethod
     def resolve_ayah_timings_url(obj: Asset, context: dict) -> str | None:
@@ -378,6 +400,7 @@ def retrieve_recitation(request: Request, recitation_slug: str) -> Asset:
             Asset.objects.select_related("publisher", "reciter", "riwayah", "qiraah")
             .prefetch_related("versions", "recitation_qualities")
             .filter(request.publisher_q())
+            .annotate(has_ayah_timings=has_ayah_timings_exists(visible_qualities_only=False))
             .get(slug=recitation_slug, category=CategoryChoice.RECITATION)
         )
     except Asset.DoesNotExist as exc:
