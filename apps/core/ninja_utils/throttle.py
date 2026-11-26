@@ -208,3 +208,18 @@ class DRFUserPathRateThrottle(DRFUserRateThrottle):
         logger = logging.getLogger(__name__)
         logger.error(f"UserPathRateThrottle error for {self.key}")
         return True
+
+
+class PublisherInquiryAnonRateThrottle(NinjaAnonRateThrottle):
+    """
+    Enforced per-IP budget for the public "contact us to join" form. Keyed on the
+    client IP for every caller, signed in or not, so one browser cannot flood the inbox.
+    """
+
+    scope = "publisher_inquiry"
+
+    def get_rate(self) -> str:
+        return settings.PUBLISHER_INQUIRY_THROTTLE_RATE
+
+    def get_cache_key(self, request: HttpRequest) -> str:
+        return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}

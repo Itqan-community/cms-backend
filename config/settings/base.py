@@ -474,6 +474,8 @@ EMAIL_USE_SSL = config("EMAIL_USE_SSL", cast=bool, default=False)
 _EMAIL_SENDER_NAME = config("EMAIL_SENDER_NAME", default="Fanar")
 _EMAIL_SENDER_EMAIL = config("EMAIL_SENDER_EMAIL", default="noreply@itqan.dev")
 DEFAULT_FROM_EMAIL = f"{_EMAIL_SENDER_NAME} <{_EMAIL_SENDER_EMAIL}>" if _EMAIL_SENDER_NAME else _EMAIL_SENDER_EMAIL
+# Where the landing page's "contact us to join" form is delivered.
+PUBLISHER_INQUIRY_EMAIL = config("PUBLISHER_INQUIRY_EMAIL", default="connect@itqan.dev")
 
 # Cache Configuration
 CACHES = {
@@ -541,6 +543,8 @@ USER_PATH_THROTTLE_RATE = config("USER_PATH_THROTTLE_RATE", default="10/sec")
 # where period is one of s/sec, m/min, h/hour, d/day.
 PUBLIC_API_USER_THROTTLE_RATE = config("PUBLIC_API_USER_THROTTLE_RATE", default="10000/min")
 PUBLIC_API_ANON_THROTTLE_RATE = config("PUBLIC_API_ANON_THROTTLE_RATE", default="100/min")
+# Per-IP budget for the public "contact us to join" form (cms-api publisher-inquiries/).
+PUBLISHER_INQUIRY_THROTTLE_RATE = config("PUBLISHER_INQUIRY_THROTTLE_RATE", default="5/hour")
 
 # Ninja configs
 NINJA_PAGINATION_CLASS = "apps.core.ninja_utils.paginations.NinjaPagination"

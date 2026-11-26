@@ -47,6 +47,11 @@ The system serves **four distinct API surfaces**, each with their own audience a
 | **Tenant API** | `tenant/` | Multi-tenant SaaS API for publishers. Each publisher can have their own domain; content is filtered by the `Domain` the request originates from. All tenants share a single database. | JWT/Session |
 | **Portal API** | `portal/` | Internal admin portal for uploading, writing, updating, and managing content (full CRUD). All users are internal company staff. | JWT/Session + group-based permissions |
 
+The CMS API also takes the landing page's "contact us to join" form at `POST /cms-api/publisher-inquiries/`
+(anonymous, throttled per IP by `PUBLISHER_INQUIRY_THROTTLE_RATE`, default 5/hour). Nothing is stored: a
+Celery task emails the request to `PUBLISHER_INQUIRY_EMAIL` (default `connect@itqan.dev`) with `Reply-To`
+set to the sender. A filled `website` field (a honeypot the form hides) is answered with 200 and dropped.
+
 The portal also exposes `POST /portal/ai/translate/` for the create forms: it translates the
 Arabic name/description/bio fields to English with the Gemini free tier (`mode=translate`), or
 writes the description fields from the matching Arabic / English Wikipedia articles and returns their `sources`
