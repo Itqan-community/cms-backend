@@ -22,12 +22,14 @@ from apps.content.models import (
 from apps.content.services.asset_columns import AssetColumnService
 from apps.content.services.asset_content import (
     VersionDeleteBlockedReason,
+    header_not_first_error,
     is_first_version,
     is_head_version,
     version_delete_blocked_reason,
 )
 from apps.content.services.asset_content_import import (
     PREVIEW_BYTES,
+    AssetContentHeaderNotFirstError,
     AssetContentParseError,
     ColumnsPreview,
     preview_content_columns,
@@ -213,6 +215,9 @@ class ImportColumnsPreviewOut(Schema):
     mapping: dict[str, int]
     # The auto-matched fields already cover a required list.
     complete: bool
+    # Text rows between the header and the first data row (1-based); a strict
+    # import rejects them, so the uploader should fix them first.
+    attention_rows: list[int] = []
 
 
 class ImportColumnIn(Schema):
@@ -241,6 +246,8 @@ def _import_columns_out(file: UploadedFile, spec: UnitSpec, columns: list) -> di
             [column.key for column in columns],
             truncated=len(prefix) > PREVIEW_BYTES,
         )
+    except AssetContentHeaderNotFirstError as exc:
+        raise header_not_first_error() from exc
     except AssetContentParseError as exc:
         raise ItqanError(
             error_name="content_file_unparseable",
@@ -259,6 +266,7 @@ def _import_columns_out(file: UploadedFile, spec: UnitSpec, columns: list) -> di
         "required": preview.required,
         "mapping": preview.mapping,
         "complete": preview.complete,
+        "attention_rows": preview.attention_rows,
     }
 
 

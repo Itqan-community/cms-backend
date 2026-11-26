@@ -108,6 +108,11 @@ class AssetContentColumnMappingError(AssetContentParseError):
         super().__init__(f"Column mapping {reason}: {', '.join(fields)}.")
 
 
+class AssetContentHeaderNotFirstError(AssetContentParseError):
+    """With a column mapping, the file's first non-blank row must be its header:
+    it is a data row or a one-cell line (a title above the header) instead."""
+
+
 class AssetContentInvalidRowsError(AssetContentParseError):
     """Strict parsing found rows whose text would be silently dropped.
 
@@ -456,34 +461,36 @@ def _could_be_header(row: list[str]) -> bool:
     return any(cells) and not any(_is_unit_number(cell) for cell in cells if cell)
 
 
-def _locate_header_row(rows: list[list[str]], *, data_may_follow: bool = False) -> int:
-    """The header row: the last non-blank row before the first data row (a row
-    with a cell the parsers read as a number), among the first ``_HEADER_SCAN_ROWS``
-    rows, so the full file and its preview agree.
+def _locate_header_row(rows: list[list[str]]) -> int:
+    """The header row: the file's first non-blank row. Nothing is guessed, so no
+    data row can be taken for the header and blanked.
 
-    Nothing below the first data row can be the header, so no data row is ever
-    blanked as preamble, whatever text it carries (an alias such as ``text`` in
-    an ignored column included). No guessing: a file with no data row in that
-    range, or nothing above its first one, is rejected. ``data_may_follow`` (a
-    preview of the file's start) lets a prefix that ends before its first data
-    row use its last non-blank row.
+    Raises ``AssetContentHeaderNotFirstError`` when that row cannot be a header:
+    it holds a number (a data row), or fills one cell (a title above the header;
+    every template needs a unit and a text column). Rows between the header and
+    the data are parsed like data rows, so text on them is a reported row error.
     """
-    scanned = rows[:_HEADER_SCAN_ROWS]
-    first_data = next(
-        (
-            index
-            for index, row in enumerate(scanned)
-            if not _could_be_header(row) and any((cell or "").strip() for cell in row)
-        ),
-        None,
-    )
-    if first_data is None and not data_may_follow:
-        raise AssetContentParseError("No data rows found below a header row.")
-    above = scanned if first_data is None else scanned[:first_data]
-    header = next((index for index in range(len(above) - 1, -1, -1) if _could_be_header(above[index])), None)
-    if header is None:
-        raise AssetContentParseError("No header row found above the data.")
-    return header
+    index = next((i for i, row in enumerate(rows) if any((cell or "").strip() for cell in row)), None)
+    if index is None:
+        raise AssetContentParseError("File is empty.")
+    row = rows[index]
+    if not _could_be_header(row) or sum(1 for cell in row if (cell or "").strip()) < 2:
+        raise AssetContentHeaderNotFirstError("The first non-blank row is not a header row.")
+    return index
+
+
+def _attention_rows(rows: list[list[str]], header_index: int) -> list[int]:
+    """1-based numbers of the non-blank rows between the header and the first
+    data row: a strict import reports them, so the preview points them out."""
+    found: list[int] = []
+    for index in range(header_index + 1, min(len(rows), header_index + 1 + _HEADER_SCAN_ROWS)):
+        row = rows[index]
+        if not any((cell or "").strip() for cell in row):
+            continue
+        if not _could_be_header(row):
+            break
+        found.append(index + 1)
+    return found
 
 
 def _complete(mapping: dict[str, int], required: list[list[str]]) -> bool:
@@ -541,6 +548,8 @@ class ColumnsPreview:
     unit_fields: list[str]
     required: list[list[str]]
     mapping: dict[str, int]
+    # Text rows between the header and the data (1-based): a strict import rejects them.
+    attention_rows: list[int] = field(default_factory=list)
 
     @property
     def complete(self) -> bool:
@@ -562,7 +571,8 @@ def preview_content_columns(
         prefix = prefix[: end + 1] if end >= 0 else prefix
     rows = _read_rows(prefix)
     aliases = _field_aliases(spec, column_keys)
-    header_index = _locate_header_row(rows, data_may_follow=truncated)
+    # The same rule as the import, on a prefix that may end before any data row.
+    header_index = _locate_header_row(rows)
     header = [cell.strip() for cell in rows[header_index]]
     samples = [
         [(cell or "").strip()[:_SAMPLE_CELL_CHARS] for cell in row]
@@ -576,6 +586,7 @@ def preview_content_columns(
         unit_fields=list(_unit_aliases(spec)),
         required=required_field_sets(spec, column_keys),
         mapping=_auto_mapping(rows[header_index], aliases),
+        attention_rows=_attention_rows(rows, header_index),
     )
 
 
