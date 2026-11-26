@@ -388,6 +388,8 @@ Each result lists the asset's installable languages, source first, with the newe
 
 `access_request_url` is the asset's page in the CMS, where access is requested; it is `null` for open assets.
 
+`timing_level` is the finest timing a recitation has (`ayah`, `word` or `sentence`), `null` without timings. Recitations are not listed today, so it is always `null` in practice; it is there for clients to show once they are.
+
 ```json
 {
   "slug": "tafsir-jalalayn",
@@ -400,7 +402,8 @@ Each result lists the asset's installable languages, source first, with the newe
   "languages": [
     {"language": "ar", "is_source": true, "latest_version": "2.4.0"},
     {"language": "en", "is_source": false, "latest_version": "1.3.0"}
-  ]
+  ],
+  "timing_level": null
 }
 ```
 
