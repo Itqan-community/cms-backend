@@ -54,7 +54,8 @@ writes the description fields from the matching Arabic / English Wikipedia artic
 context only (e.g. the Arabic description helps name the asset) and are never returned. In `web`
 mode, `fill_arabic` names description/long_description/bio fields whose Arabic is empty; the same
 call writes them in Arabic and returns them in `fields_ar`. It needs any portal create permission for mushafs, text assets, fonts,
-recitations or reciters, and returns `ai_translate_empty` (400), `ai_rate_limited` (429, a per-minute
+recitations or reciters, or (for the version forms and the content editor's commit message) the
+update permission for text assets, mushafs or fonts or the text-asset content edit permission, and returns `ai_translate_empty` (400), `ai_rate_limited` (429, a per-minute
 limit: retry shortly), `ai_quota_exceeded` (429, the free daily limit) or `ai_unavailable` (503).
 With `slug_for` (asset create forms) the same call also returns the new asset's suggested `slug`
 (see Asset below), so each click is one Gemini call.

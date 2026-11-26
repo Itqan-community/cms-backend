@@ -78,10 +78,16 @@ class AiTranslateOut(Schema):
         | permission_class(PermissionChoice.PORTAL_CREATE_FONT)
         | permission_class(PermissionChoice.PORTAL_CREATE_RECITATION)
         | permission_class(PermissionChoice.PORTAL_CREATE_RECITER)
+        # Version name/summary in the version forms and the content editor's commit step.
+        | permission_class(PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+        | permission_class(PermissionChoice.PORTAL_UPDATE_TEXT_ASSET)
+        | permission_class(PermissionChoice.PORTAL_UPDATE_MUSHAF)
+        | permission_class(PermissionChoice.PORTAL_UPDATE_FONT)
     ]
 )
 def ai_translate(request: Request, data: AiTranslateIn):
-    """Translate Arabic asset metadata to English with the free-tier Gemini API (create forms only).
+    """Translate Arabic asset metadata to English with the free-tier Gemini API (create forms,
+    version forms and the content editor's commit message).
 
     `web` mode can also write empty Arabic description fields (`fill_arabic` → `fields_ar`).
     """
