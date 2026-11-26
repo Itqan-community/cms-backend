@@ -19,7 +19,6 @@ from apps.core.ninja_utils.errors import NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
-from apps.usage_tracking.decorators.track_usage import track_extra, track_usage
 
 router = ItqanRouter(tags=[NinjaTag.TEXT_ASSETS])
 
@@ -78,21 +77,6 @@ def _cache_control(refs: list[PublicAssetRef]) -> str:
     return "private, no-cache"
 
 
-def _track(request: Request, meta: list[dict], ayah_key: str, to_ayah: int | None) -> None:
-    publishers = {item["publisher_id"]: item["publisher_name"] for item in meta if item["publisher_id"]}
-    track_extra(
-        request,
-        entity_type="text",
-        accessed_entity_name=", ".join(item["name_ar"] for item in meta),
-        entity_ids=[item["id"] for item in meta],
-        entity_names=[item["name_ar"] for item in meta],
-        publisher_ids=list(publishers),
-        publisher_names=list(publishers.values()),
-        ayah_key=ayah_key,
-        to_ayah=to_ayah,
-    )
-
-
 @router.get(
     "ayahs/{ayah_key}/",
     response={
@@ -108,7 +92,6 @@ def _track(request: Request, meta: list[dict], ayah_key: str, to_ayah: int | Non
         | NinjaErrorResponse[Literal["asset_not_found"], AssetSlugsExtra],
     },
 )
-@track_usage(entity_type="text")
 def get_ayah_text(
     request: Request,
     ayah_key: str,
@@ -149,7 +132,6 @@ def get_ayah_text(
         # Warm path: access is still checked live (no query when every asset is open).
         refs = [PublicAssetRef(**ref) for ref in cached["refs"]]
         enforce_assets_access_on_public_api(getattr(request, "user", None), refs)
-        _track(request, cached["meta"], ayah_key, to_ayah)
         resp = HttpResponse(cached["body"], content_type="application/json; charset=utf-8")
         resp["Cache-Control"] = _cache_control(refs)
         return resp
@@ -160,22 +142,11 @@ def get_ayah_text(
     refs = [item.ref for item in served]
     enforce_assets_access_on_public_api(getattr(request, "user", None), refs)
 
-    meta = [
-        {
-            "id": item.asset.pk,
-            "name_ar": item.asset.name_ar or "",
-            "publisher_id": item.asset.publisher_id,
-            "publisher_name": item.asset.publisher.name if item.asset.publisher_id else None,
-        }
-        for item in served
-    ]
-    _track(request, meta, ayah_key, to_ayah)
-
     payload = AyahTextOut(**service.build_payload(window, served)).model_dump()
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     cache.set(
         cache_key,
-        {"body": body, "refs": [ref.__dict__ for ref in refs], "meta": meta},
+        {"body": body, "refs": [ref.__dict__ for ref in refs]},
         AYAH_TEXT_RESPONSE_CACHE_TTL,
     )
 
