@@ -96,6 +96,20 @@ class ColumnsPreviewTests(QuranDataMixin, BaseTestCase):
         # Assert
         self.assertEqual(preview.attention_rows, [2, 3])
 
+    def test_preview_content_columns_where_row_has_text_only_in_ignored_columns_should_not_flag_it(self):
+        # Arrange — "notes" is not mapped, so the import blanks row 2
+        raw = b"surah,ayah,text,notes\n,,,editor note\n1,2,Praise,\n"
+
+        # Act
+        named = preview_content_columns(raw, self.spec, ["text"], truncated=False)
+        mapped = preview_content_columns(
+            raw, self.spec, ["text"], truncated=False, column_mapping={"surah": 0, "ayah": 1, "text": 2}
+        )
+
+        # Assert
+        self.assertEqual(named.attention_rows, [])
+        self.assertEqual(mapped.attention_rows, [])
+
     def test_preview_content_columns_where_unit_columns_unknown_should_report_no_attention_rows(self):
         # Arrange — nothing matched by name and no mapping sent yet
         raw = b"chapter,verse,meaning\n,,lost content\n1,2,Praise\n"
@@ -340,6 +354,23 @@ class ColumnMappingImportTests(QuranDataMixin, BaseTestCase):
 
         # Assert
         self.assertEqual(raised.exception.rows, {2: "unreadable", 3: "unreadable"})
+
+    def test_parse_content_file_where_row_before_data_has_text_only_in_ignored_columns_should_import(self):
+        # Arrange
+        raw = b"surah,ayah,text,notes\n,,,editor note\n1,2,Praise,\n"
+
+        # Act
+        parsed = parse_content_file(
+            raw,
+            self.spec,
+            self.asset,
+            column_keys=["text"],
+            strict=True,
+            column_mapping={"surah": 0, "ayah": 1, "text": 2},
+        )
+
+        # Assert
+        self.assertEqual([(p.unit_id, p.cells) for p in parsed], [(self.ayah2.id, {"text": "Praise"})])
 
     def test_parse_content_file_where_mapping_and_preamble_above_header_should_reject_the_file(self):
         # Arrange

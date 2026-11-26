@@ -490,17 +490,20 @@ def _attention_rows(
     that carry text: a strict import reports them, so the preview points them out.
 
     A data row is one whose mapped unit columns all hold numbers (the parsers'
-    test), so a number in a text column does not end the scan. Only known once
+    test), so a number in a text column does not end the scan; text only in
+    ignored columns is no error, as the import blanks it. Only known once
     the unit columns are: without an effective ``mapping`` nothing is reported.
     """
     covered = next((fields for fields in required if mapping and all(key in mapping for key in fields)), None)
     if covered is None:
         return []
     units = [mapping[key] for key in covered if key in unit_fields]
+    # Text only in ignored columns is blanked by the import, so it is no error.
+    mapped = set(mapping.values())
     found: list[int] = []
     for index in range(header_index + 1, min(len(rows), header_index + 1 + _HEADER_SCAN_ROWS)):
         row = rows[index]
-        if not any((cell or "").strip() for cell in row):
+        if not any((cell or "").strip() for column, cell in enumerate(row) if column in mapped):
             continue
         if all(column < len(row) and _is_unit_number(row[column]) for column in units):
             break
