@@ -22,7 +22,7 @@ description: غلاف الخطأ الموحّد وكتالوج الأخطاء ا
 |---|---|---|
 | `error_name` | نص | **معرّف آلي ثابت.** قم بتحويل معالجة الأخطاء بناءً عليه، ليس على `message` أو حالة HTTP. لا يحتوي على مسافات. |
 | `message` | نص | وصف قابل للقراءة البشرية. مُحلَّل عبر `Accept-Language` — آمن للعرض مباشرة للمستخدمين. |
-| `extra` | كائن أو null | تفاصيل منظمة اختيارية. الشكل يختلف حسب نوع الخطأ (انظر الكتالوج أدناه). |
+| `extra` | كائن أو مصفوفة أو null | تفاصيل منظمة اختيارية. الشكل يختلف حسب نوع الخطأ (انظر الكتالوج أدناه). تكون `null` كلما لم يكن للخطأ تفاصيل، ولا تكون كائناً فارغاً أبداً. |
 
 ## كتالوج الأخطاء
 
@@ -35,7 +35,7 @@ description: غلاف الخطأ الموحّد وكتالوج الأخطاء ا
 | 401 | `token_not_valid` | توكن JWT منتهي الصلاحية أو مُلغى | `null` |
 | 403 | `permission_denied` | مُصادَق عليه لكن غير مُخوَّل | `null` |
 | 404 | `not_found` | المورد غير موجود | `null` |
-| 422 | `validation_error` | الطلب سليم الصياغة لكن قيمه لا تستقيم معًا، مثل نطاق آيات يأتي فيه `from` بعد `to` أو يتجاوز نهاية السورة. يبيّن `message` موضع الخطأ | `{}` |
+| 422 | `validation_error` | الطلب سليم الصياغة لكن قيمه لا تستقيم معًا، مثل نطاق آيات يأتي فيه `from` بعد `to` أو يتجاوز نهاية السورة. يبيّن `message` موضع الخطأ | `null` |
 | 4xx/5xx | `http_error` | مسار خطأ HTTP عام | `null` |
 | 500 | `internal_error` | استثناء خادم غير معالَج | `null` |
 | متغير | *(مخصص)* | خطأ منطق أعمال عبر `ItqanError` | خاص بكل نقطة نهاية؛ موثَّق في صفحة المرجع الخاصة بها |
@@ -56,13 +56,13 @@ description: غلاف الخطأ الموحّد وكتالوج الأخطاء ا
 }
 ```
 
-- **422**: كائن فارغ. كل قيمة صحيحة بمفردها لكنها لا تستقيم معًا، ويبيّن `message` موضع الخطأ:
+- **422**: `null`. كل قيمة صحيحة بمفردها لكنها لا تستقيم معًا، ويبيّن `message` موضع الخطأ:
 
 ```json
 {
   "error_name": "validation_error",
   "message": "نطاق الآيات غير صالح: من (5) يجب ألا تتجاوز إلى (3).",
-  "extra": {}
+  "extra": null
 }
 ```
 
@@ -89,7 +89,7 @@ async function apiFetch(url, options = {}) {
     case "not_found":
       return null;
     case "validation_error":
-      // اعرض message دائمًا؛ extra يسرد أخطاء الحقول في 400 وهو {} في 422
+      // اعرض message دائمًا؛ extra يسرد أخطاء الحقول في 400 وهو null في 422
       throw new ValidationError(error.message, Array.isArray(error.extra) ? error.extra : []);
     case "authentication_error":
     case "token_not_valid":
@@ -120,7 +120,7 @@ def api_fetch(url):
         if name == "not_found":
             return None
         elif name == "validation_error":
-            # احتفظ بـ message دائمًا؛ extra يسرد أخطاء الحقول في 400 وهو {} في 422
+            # احتفظ بـ message دائمًا؛ extra يسرد أخطاء الحقول في 400 وهو null في 422
             fields = error["extra"] if isinstance(error.get("extra"), list) else []
             raise ValueError(f"فشل التحقق: {error['message']}", fields)
         elif name in ("authentication_error", "token_not_valid"):
