@@ -107,4 +107,4 @@ When several checks fail, the first in this order is returned: `asset_not_found`
 
 ## Caching
 
-Responses made only of open assets are cacheable for 5 minutes. Without an API key they are `Cache-Control: public, max-age=300, s-maxage=300`, so shared caches may keep them. With an API key they are `private, max-age=300`: only your own client may cache them. A response with any restricted asset is `private, no-cache`. A newly published version can take up to 5 minutes to appear.
+Responses are never stored by shared caches such as CDNs or proxies, so an asset that becomes restricted stops being served on the next request. Responses made only of open assets are `Cache-Control: private, max-age=300`, with or without an API key: your own client may reuse them for 5 minutes. A response with any restricted asset is `private, no-cache`. A newly published version can take up to 5 minutes to appear.
