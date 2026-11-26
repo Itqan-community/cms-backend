@@ -1225,6 +1225,18 @@ msgstr "منتهي الصلاحية"
 msgid "Cancelled"
 msgstr "ملغي"
 
+msgid "Tafsirs or translations"
+msgstr "تفاسير أو ترجمات"
+
+msgid "More than one type"
+msgstr "أكثر من نوع"
+
+msgid "publisher inquiry"
+msgstr "طلب انضمام ناشر"
+
+msgid "publisher inquiries"
+msgstr "طلبات انضمام الناشرين"
+
 msgid "You do not have access to this publisher."
 msgstr "ليس لديك صلاحية الوصول لهذا الناشر"
 

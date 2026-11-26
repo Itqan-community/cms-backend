@@ -5,7 +5,15 @@ from django.utils.html import format_html
 
 from apps.core.admin import AuditedModelAdmin
 
-from .models import Domain, MemberLanguage, Publisher, PublisherGroup, PublisherMember, PublisherMemberInvitation
+from .models import (
+    Domain,
+    MemberLanguage,
+    Publisher,
+    PublisherGroup,
+    PublisherInquiry,
+    PublisherMember,
+    PublisherMemberInvitation,
+)
 
 
 class PublisherMemberInline(admin.TabularInline):
@@ -177,3 +185,30 @@ class DomainAdmin(AuditedModelAdmin):
     list_filter = ["is_active", "created_at"]
     search_fields = ["domain", "publisher__name"]
     raw_id_fields = ["publisher"]
+
+
+@admin.register(PublisherInquiry)
+class PublisherInquiryAdmin(admin.ModelAdmin):
+    """Landing-page "contact us to join" requests; read-only, they come from the public form."""
+
+    list_display = ["organization", "name", "email", "content_kind", "language", "created_at", "emailed_at"]
+    list_filter = ["content_kind", "language", "created_at"]
+    search_fields = ["organization", "name", "email", "message"]
+    readonly_fields = [
+        "name",
+        "organization",
+        "email",
+        "content_kind",
+        "message",
+        "language",
+        "created_at",
+        "emailed_at",
+    ]
+    fields = readonly_fields
+    date_hierarchy = "created_at"
+
+    def has_add_permission(self, request) -> bool:
+        return False
+
+    def has_change_permission(self, request, obj=None) -> bool:
+        return False

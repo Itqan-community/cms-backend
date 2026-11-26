@@ -19,7 +19,7 @@ router = ItqanRouter(tags=[NinjaTag.PUBLISHERS])
 
 inquiry_throttle = PublisherInquiryAnonRateThrottle()
 
-ContentKind = Literal["recitations", "mushafs", "text", "fonts", "several"]
+ContentKind = Literal["recitations", "mushafs", "text", "fonts", "several"]  # PublisherInquiry.ContentKind
 
 
 class PublisherInquiryIn(Schema):
