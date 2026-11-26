@@ -1,7 +1,5 @@
 from datetime import timedelta
-from unittest import skipUnless
 
-from django.conf import settings
 from django.test import override_settings
 from django.utils import timezone
 from model_bakery import baker
@@ -10,12 +8,8 @@ from apps.core.tests.base import BaseTestCase
 from apps.users.models import APIKey, User
 
 
-# Auth config (auth.py public_auth) is built at import time from settings, so
-# @override_settings cannot make OAuth2 required at runtime. These tests are only
-# meaningful when OAuth2 is actually enabled at process start; otherwise the public
-# auth falls back to AnonymousUser and invalid-key calls return 200 instead of 401.
-@skipUnless(settings.ENABLE_OAUTH2, "OAuth2 disabled; auth config is import-time bound")
-@override_settings(ENABLE_API_KEY_AUTH=True)
+# PublicAuth reads these flags on every request, so @override_settings takes effect.
+@override_settings(ENABLE_API_KEY_AUTH=True, ENABLE_ANONYMOUS_TRAFFIC=True)
 class ApiKeyWorkflowTestCase(BaseTestCase):
     """
     End-to-End test for the API key workflow:
@@ -37,24 +31,39 @@ class ApiKeyWorkflowTestCase(BaseTestCase):
         # Assert
         self.assertEqual(200, res.status_code, res.content)
 
-    # A missing/invalid/revoked key can only produce 401 when anonymous traffic is off;
-    # with ENABLE_ANONYMOUS_TRAFFIC=True these requests are downgraded to AnonymousUser and
-    # return 200. ENABLE_ANONYMOUS_TRAFFIC is read at request time, so overriding it here
-    # takes effect (unlike the import-time-bound auth-method list). An *expired* key differs:
-    # it 401s regardless of this flag (see the expired test below).
-    @override_settings(ENABLE_ANONYMOUS_TRAFFIC=False)
-    def test_access_recitations_where_invalid_api_key_should_return_401(self):
-        # Arrange — no valid key created
+    def test_access_recitations_where_no_api_key_should_return_200_as_anonymous(self):
+        # Arrange: anonymous traffic is on and no key is sent
 
         # Act
-        res = self.client.get("/recitations/", headers={"x-api-key": "invalid-key"})
+        res = self.client.get("/recitations/")
+
+        # Assert
+        self.assertEqual(200, res.status_code, res.content)
+
+    # A key that is sent but unusable is rejected even though anonymous traffic is allowed:
+    # it must not quietly fall back to the anonymous budget.
+    def test_access_recitations_where_invalid_api_key_should_return_401_invalid_api_key(self):
+        # Arrange: no key with this prefix exists
+
+        # Act
+        res = self.client.get("/recitations/", headers={"x-api-key": "bogus.key"})
 
         # Assert
         self.assertEqual(401, res.status_code, res.content)
-        self.assertEqual("authentication_error", res.json()["error_name"])
+        self.assertEqual("invalid_api_key", res.json()["error_name"])
 
-    @override_settings(ENABLE_ANONYMOUS_TRAFFIC=False)
-    def test_access_recitations_where_api_key_is_revoked_should_return_401(self):
+    def test_access_recitations_where_api_key_secret_is_wrong_should_return_401_invalid_api_key(self):
+        # Arrange: a real prefix with the wrong secret
+        api_key, _ = APIKey.objects.create_key(name="Real Key", user=self.user)
+
+        # Act
+        res = self.client.get("/recitations/", headers={"x-api-key": f"{api_key.prefix}.wrong-secret"})
+
+        # Assert
+        self.assertEqual(401, res.status_code, res.content)
+        self.assertEqual("invalid_api_key", res.json()["error_name"])
+
+    def test_access_recitations_where_api_key_is_revoked_should_return_401_invalid_api_key(self):
         # Arrange
         api_key, raw_key = APIKey.objects.create_key(name="Revoked Key", user=self.user)
         api_key.revoked = True
@@ -65,12 +74,10 @@ class ApiKeyWorkflowTestCase(BaseTestCase):
 
         # Assert
         self.assertEqual(401, res.status_code, res.content)
-        self.assertEqual("authentication_error", res.json()["error_name"])
+        self.assertEqual("invalid_api_key", res.json()["error_name"])
 
-    @override_settings(ENABLE_ANONYMOUS_TRAFFIC=True)
-    def test_access_recitations_where_api_key_is_expired_should_return_401_expired(self):
-        # Arrange -- an expired key is a presented-but-stale credential; it must 401 with an
-        # "expired" message even when anonymous traffic is enabled, not fall through to 200.
+    def test_access_recitations_where_api_key_is_expired_should_return_401_invalid_api_key(self):
+        # Arrange
         api_key, raw_key = APIKey.objects.create_key(name="Expired Key", user=self.user)
         api_key.expiry_date = timezone.now() - timedelta(days=1)
         api_key.save()
@@ -81,5 +88,15 @@ class ApiKeyWorkflowTestCase(BaseTestCase):
         # Assert
         self.assertEqual(401, res.status_code, res.content)
         body = res.json()
-        self.assertEqual("authentication_error", body["error_name"])
+        self.assertEqual("invalid_api_key", body["error_name"])
         self.assertIn("expired", body["message"].lower())
+
+    def test_access_tenant_recitations_where_invalid_api_key_should_return_401_invalid_api_key(self):
+        # Arrange: the tenant API's optional auth tries API keys too
+
+        # Act
+        res = self.client.get("/tenant/recitations/", headers={"x-api-key": "bogus.key"})
+
+        # Assert
+        self.assertEqual(401, res.status_code, res.content)
+        self.assertEqual("invalid_api_key", res.json()["error_name"])

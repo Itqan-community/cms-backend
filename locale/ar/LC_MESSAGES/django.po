@@ -867,7 +867,10 @@ msgstr "يجب ألا يحتوي معرّف المستخدم الخارجي عل
 msgid "The external user identifier contains invalid characters."
 msgstr "يحتوي معرّف المستخدم الخارجي على أحرف غير صالحة."
 
-msgid "API key has expired."
+msgid "The API key is not valid or has been revoked."
+msgstr "مفتاح API غير صالح أو أُلغي."
+
+msgid "The API key has expired."
 msgstr "انتهت صلاحية مفتاح API."
 
 msgid "Invalid Input"
@@ -1965,6 +1968,9 @@ msgstr[2] "مدخلان"
 msgstr[3] "مدخلات"
 msgstr[4] "مدخلاً"
 msgstr[5] "مدخل"
+
+#~ msgid "API key has expired."
+#~ msgstr "انتهت صلاحية مفتاح API."
 
 #, python-brace-format
 #~ msgid "window_hours must divide 24 evenly, got {window_hours}"

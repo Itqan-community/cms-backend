@@ -31,6 +31,7 @@ Every non-2xx response from the Fanar API uses the same envelope. Build your err
 | 400 | `validation_error` | Invalid query parameters or request body | Array of field-level error objects |
 | 400 | `invalid_json` | Malformed JSON request body | `null` |
 | 401 | `authentication_error` | Missing or invalid credentials | `null` |
+| 401 | `invalid_api_key` | The `X-API-Key` header holds a key that does not exist, was revoked or has expired. Calls without the header are not affected | `null` |
 | 401 | `token_not_valid` | Expired or revoked JWT token | `null` |
 | 403 | `permission_denied` | Authenticated but not authorized | `null` |
 | 404 | `not_found` | Resource does not exist | `null` |

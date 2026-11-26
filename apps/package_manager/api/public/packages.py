@@ -248,10 +248,14 @@ def list_packages(
 
 @router.get(
     "packages/me/",
-    response={200: PackageAccountOut, 401: NinjaErrorResponse[Literal["authentication_required"]]},
+    response={
+        200: PackageAccountOut,
+        401: NinjaErrorResponse[Literal["authentication_required"]] | NinjaErrorResponse[Literal["invalid_api_key"]],
+    },
 )
 def get_package_account(request: Request):
-    """The account the API key belongs to; 401 without a valid key.
+    """The account the API key belongs to. 401 `authentication_required` without a key,
+    401 `invalid_api_key` for an unknown, revoked or expired one.
     `itqan login` uses it to check a key before saving it."""
     user = request.user
     if not user.is_authenticated:

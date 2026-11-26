@@ -4,7 +4,6 @@ from allauth.headless.contrib.ninja.security import XSessionTokenAuth
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.utils.translation import gettext_lazy as _
-from ninja.errors import AuthenticationError
 from ninja_keys.auth import ApiKeyAuth as BaseApiKeyAuth
 from oauth2_provider.contrib.rest_framework import OAuth2Authentication
 
@@ -88,12 +87,18 @@ class ApiKeyAuth(BaseApiKeyAuth):
         if not key:
             return None
         model = self.model
+        # A key that is sent but unusable is an error, not an anonymous call: falling back
+        # would hide a stale key behind the much smaller anonymous budget.
         try:
             api_key = model.objects.get_from_key(key)
         except model.DoesNotExist:
-            return None
+            raise ItqanError(
+                "invalid_api_key",
+                _("The API key is not valid or has been revoked."),
+                status_code=401,
+            ) from None
         if api_key.has_expired:
-            raise AuthenticationError(message=str(_("API key has expired.")))
+            raise ItqanError("invalid_api_key", _("The API key has expired."), status_code=401)
 
         request.user = api_key.user
         return api_key

@@ -179,7 +179,7 @@ class PackageAccountTests(BaseTestCase):
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)
-        self.assertEqual("authentication_required", response.json()["error_name"])
+        self.assertEqual("invalid_api_key", response.json()["error_name"])
 
 
 @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True, FRONTEND_BASE_URL="https://cms.example")

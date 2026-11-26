@@ -29,7 +29,8 @@ authentication rolls out more widely.
 variable or secret manager, never commit it to source control or expose it in \
 client-side code.
 
-Send the key in the `X-API-Key` header on each request.
+Send the key in the `X-API-Key` header on each request. A key that does not exist, was \
+revoked or has expired gets `401 invalid_api_key`; it is never treated as an anonymous call.
 
 Responses to requests with an API key carry an `X-Itqan-App` header with your app's public \
 slug, and audio and file URLs get a `c=<slug>` query parameter. Keep that parameter when you \

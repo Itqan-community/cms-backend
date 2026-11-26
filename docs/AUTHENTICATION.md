@@ -391,6 +391,7 @@ retained indefinitely.
 * **Ownership Binding:** Every key is bound to a logged-in developer via `APIKey.user`. This ensures any application using the system can be mapped directly to a developer for contact and governance.
 * **Multiple Applications Support:** A single developer can hold multiple keys (one per application). This is supported directly by the `unique_together = ("user", "name")` constraint on the `APIKey` model.
 * **Schema Impact:** No database schema changes or new models are required. The existing `APIKey` model satisfies all requirements.
+* **Invalid keys are rejected:** a request whose `X-API-Key` names no usable key (unknown prefix, wrong secret, revoked or expired) gets `401 invalid_api_key` from `ApiKeyAuth`, on every surface that tries API keys (public, tenant and `optional_auth` routes). It never falls back to the anonymous user. Only a request with no `X-API-Key` header is anonymous.
 
 ## API Keys: Public Identifiers, Not Secrets
 
