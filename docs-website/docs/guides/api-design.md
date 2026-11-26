@@ -71,6 +71,19 @@ All non-2xx responses share the same structure:
 
 See [Error Handling](/docs/guides/errors) for the full error catalog.
 
+## Caching
+
+The list endpoints (`/recitations/`, `/reciters/`, `/riwayahs/`, `/packages/`, `/recommendations/trending/`, `/recommendations/editorial/` and `/recommendations/similar/{asset_id}/`) send `Cache-Control: public, max-age=60` and an `ETag`:
+
+- A browser or CDN may reuse a list for up to 60 seconds, so a publisher's edit can take up to a minute to show.
+- After that, send the `ETag` back in `If-None-Match`. When nothing changed you get `304 Not Modified` with an empty body, and you keep using your copy.
+- Responses to a request with an API key are `private, max-age=60`: only your own client may keep them, never a shared cache.
+
+```bash
+curl -i {{API_BASE}}/reciters/ -H 'If-None-Match: "3f2a…"'
+# HTTP/1.1 304 Not Modified
+```
+
 ## Backwards-Compatible Evolution
 
 The API evolves additively. New fields may appear in existing responses at any time; your client must ignore unknown fields rather than failing on them. Breaking changes — removed fields, changed types, renamed endpoints — are always introduced on a new path segment. An integration built against `/recitations/` today will keep working as new fields are added.

@@ -84,6 +84,8 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
+    # Outside AppTagging, so the ETag covers the app-tagged body.
+    "apps.core.middlewares.public_list_cache.PublicListCacheMiddleware",
     "apps.usage_tracking.middlewares.app_tagging.AppTaggingMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "apps.publishers.middlewares.publisher_middleware.PublisherMiddleware",
@@ -310,7 +312,7 @@ CORS_ALLOW_HEADERS = [
 
 # Browser clients cannot read a non-simple response header unless it is exposed, and the
 # advisory about a malformed X-Client-* header is useless if the developer cannot see it.
-CORS_EXPOSE_HEADERS = ["X-Itqan-Warning"]
+CORS_EXPOSE_HEADERS = ["X-Itqan-Warning", "ETag"]
 
 # Custom user model
 AUTH_USER_MODEL = "users.User"
