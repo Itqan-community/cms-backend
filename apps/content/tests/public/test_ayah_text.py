@@ -245,6 +245,22 @@ class AyahTextPublicApiTest(GroupQuranDataMixin, BaseTestCase):
         rows = response.json()["assets"][0]["rows"]
         self.assertEqual(["from file", "second"], [row["cells"]["text"] for row in rows])
 
+    def test_get_ayah_text_where_file_only_version_follows_one_with_entries_should_read_its_own_file(self):
+        # Arrange: v1.0 keeps full entries; the later published v1.1 is file-only with different text.
+        asset = self._text_asset("tafsir-a")
+        self._version(asset, "1.0", {self._ayah(1): {"text": "old 1:1"}, self._ayah(2): {"text": "old 1:2"}})
+        legacy = self._version(asset, "1.1", {})
+        legacy.file_url.save("legacy.csv", ContentFile(b"surah,ayah,text\n1,1,new 1:1\n1,2,new 1:2"), save=True)
+
+        # Act
+        response = self.client.get("/ayahs/1:1/?assets=tafsir-a&to=2")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        item = response.json()["assets"][0]
+        self.assertEqual("1.1", item["version"])
+        self.assertEqual(["new 1:1", "new 1:2"], [row["cells"]["text"] for row in item["rows"]])
+
     def test_get_ayah_text_where_ayah_group_asset_should_return_the_group_covering_the_ayah(self):
         # Arrange
         asset = self._text_asset("grouped", template=AssetTemplateChoice.AYAH_GROUP)
