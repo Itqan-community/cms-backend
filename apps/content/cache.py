@@ -19,6 +19,16 @@ RECITATION_RESPONSE_CACHE_TTL = 60 * 5  # 5 minutes
 RECITATION_AYAH_RESPONSE_CACHE_TTL = 60 * 5  # 5 minutes
 
 
+def public_recitation_cache_control(is_open_access: bool) -> str:
+    """``Cache-Control`` for a public recitation response.
+
+    Never shared-cacheable: a CDN copy of an open response would outlive the asset
+    being restricted, which only our own cache invalidation can retire. Warm hits are
+    served from that cache without DB queries, so the CDN saves little.
+    """
+    return "private, max-age=300" if is_open_access else "private, no-cache"
+
+
 def recitation_tracks_cache_key(asset_id: int) -> str:
     return f"public_recitation_tracks:{asset_id}"
 

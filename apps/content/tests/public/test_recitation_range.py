@@ -142,6 +142,22 @@ class RecitationRangeTest(BaseTestCase):
         self.assertEqual(200, second.status_code, second.content)
         self.assertEqual(first.content, second.content)
 
+    def test_get_range_where_open_asset_should_never_let_shared_caches_store_the_response(self):
+        # Arrange: a shared (CDN) copy would outlive the asset being restricted.
+        url = self._url()
+
+        # Act
+        cold = self.client.get(url)
+        warm = self.client.get(url)
+
+        # Assert
+        for response in (cold, warm):
+            self.assertEqual(200, response.status_code, response.content)
+            cache_control = response.headers.get("Cache-Control")
+            self.assertEqual("private, max-age=300", cache_control)
+            self.assertNotIn("public", cache_control)
+            self.assertNotIn("s-maxage", cache_control)
+
     def test_get_range_where_from_exceeds_to_should_return_422(self):
         # Arrange
         self.authenticate_client(self.app)

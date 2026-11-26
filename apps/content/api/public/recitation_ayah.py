@@ -9,6 +9,7 @@ from ninja import Query, Schema
 from apps.content.cache import (
     RECITATION_ASSET_META_CACHE_TTL,
     RECITATION_AYAH_RESPONSE_CACHE_TTL,
+    public_recitation_cache_control,
     quality_cache_token,
     recitation_asset_meta_cache_key,
     recitation_ayah_response_cache_key,
@@ -78,7 +79,7 @@ def get_recitation_ayah(
             )
 
         resp = HttpResponse(cached_resp, content_type="application/json")
-        resp["Cache-Control"] = "public, max-age=300, s-maxage=300" if is_open_access else "private, no-cache"
+        resp["Cache-Control"] = public_recitation_cache_control(is_open_access)
         return resp
 
     # Cache miss - query service & repository
@@ -120,5 +121,5 @@ def get_recitation_ayah(
     cache.set(_meta_key, asset_meta, RECITATION_ASSET_META_CACHE_TTL)
 
     resp = HttpResponse(response_bytes, content_type="application/json")
-    resp["Cache-Control"] = "public, max-age=300, s-maxage=300" if asset.is_open_access else "private, no-cache"
+    resp["Cache-Control"] = public_recitation_cache_control(asset.is_open_access)
     return resp
