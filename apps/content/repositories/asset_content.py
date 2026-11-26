@@ -959,7 +959,7 @@ class AssetContentRepository:
             return direct
         if version.file_url and (from_file := self._snapshot_from_file(version)):
             return from_file
-        return self.reconstruct_entries(version)
+        return self._fold_timeline(version)
 
     def reconstruct_entries(self, version: AssetVersion) -> Snapshot:
         """Every cell at this commit.
@@ -971,6 +971,10 @@ class AssetContentRepository:
         direct = self._entries_map(version)
         if direct:
             return direct
+        return self._fold_timeline(version)
+
+    def _fold_timeline(self, version: AssetVersion) -> Snapshot:
+        """Fold snapshots + deltas up to ``version`` for its (asset, language) timeline."""
         timeline = (
             self.asset_version_model.objects.filter(
                 asset=version.asset,
