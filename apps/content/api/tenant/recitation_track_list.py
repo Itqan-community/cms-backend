@@ -8,6 +8,7 @@ from pydantic import Field
 
 from apps.content.models import RecitationSurahTrack
 from apps.content.repositories.recitation import RecitationRepository
+from apps.content.services.asset_access import enforce_asset_access_on_public_api
 from apps.content.services.recitation import RecitationService
 from apps.content.services.recitation_quality_resolution import reject_renamed_folder_param
 from apps.core.mixins.constants import QURAN_SURAHS
@@ -50,6 +51,8 @@ class RecitationSurahTrackOut(Schema):
     response={
         400: NinjaErrorResponse[Literal["folder_param_renamed"]],
         200: list[RecitationSurahTrackOut],
+        401: NinjaErrorResponse[Literal["authentication_required"]],
+        403: NinjaErrorResponse[Literal["access_denied"]],
         404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
     },
 )
@@ -68,6 +71,8 @@ def list_recitation_tracks(request: Request, asset_id: int, quality: str | None 
             message=_("Asset with id {id} not found.").format(id=asset_id),
             status_code=404,
         )
+    # Restricted recitations need an approved access request, as on the public API.
+    enforce_asset_access_on_public_api(getattr(request, "user", None), asset)
 
     tracks = service.get_asset_tracks(
         asset_id,

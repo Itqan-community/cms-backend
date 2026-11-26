@@ -775,6 +775,8 @@ Every `Asset` carries four booleans, all `true` by default, that decide on which
 | `in_cli` | `itqan` CLI registry (`/packages/`) | catalog, resolve, download, and Dependabot dispatch |
 | `in_tenants` | Tenant API (`/tenant/`) | recitation list, recitation tracks, reciter/riwayah/qiraah lists |
 
+Restricted assets (`is_open_access=False`) need an approved access request on every surface that serves their content: the public track list, range and ayah endpoints, ayah text, the CLI registry, and the tenant track list (`/tenant/recitation-tracks/{id}/`), all through `enforce_asset_access_on_public_api` (401 `authentication_required` without a signed-in user or API key, 403 `access_denied` without a grant).
+
 The portal labels `in_tenants` "Publisher website" and offers its checkbox only when the asset's publisher has a website (`has_website` on `GET /portal/publishers/me/`). The API still accepts and stores `in_tenants` for a publisher without a domain: the value is kept as is, so it applies once a domain is added.
 
 ```mermaid
