@@ -450,6 +450,9 @@ msgstr "بعض الصفوف غير صالحة: تكرر وحدة أو نطاقً
 msgid "The uploaded file could not be parsed into content entries."
 msgstr "تعذّر تحليل الملف المرفوع إلى إدخالات محتوى."
 
+msgid "The file's first row must be its header row, naming each column. Remove any lines above it and upload again."
+msgstr "يجب أن يكون الصف الأول في الملف صف العناوين الذي يسمّي كل عمود. احذف أي أسطر فوقه ثم ارفع الملف مرة أخرى."
+
 #, python-brace-format
 msgid "Choose a file column for these fields: {fields}."
 msgstr "اختر عمودًا من الملف لهذه الحقول: {fields}."

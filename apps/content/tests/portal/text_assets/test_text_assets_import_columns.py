@@ -77,6 +77,44 @@ class ImportColumnsPreviewApiTest(TextAssetVersionBaseTest):
         self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("content_file_unparseable", response.json()["error_name"])
 
+    def test_preview_import_columns_where_title_above_header_should_say_the_header_must_be_first(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_READ_TEXT_ASSET)
+        file = SimpleUploadedFile("t.csv", b"My export\nchapter,verse,meaning\n1,1,x\n", content_type="text/csv")
+
+        # Act
+        response = self.client.post(self._url(), data={"file": file})
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("content_file_unparseable", body["error_name"])
+        self.assertIn("first row must be its header row", body["message"])
+
+    def test_create_version_where_mapped_file_has_title_above_header_should_say_the_header_must_be_first(self):
+        # Arrange
+        self.authenticate_user(self.user)
+        self.give_permission(self.user, PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT)
+
+        # Act
+        response = self.client.post(
+            f"/portal/text-assets/{self.text_asset.slug}/versions/",
+            data={
+                "asset_id": self.text_asset.id,
+                "version_number": "1.0",
+                "summary_en": "first",
+                "file": SimpleUploadedFile("t.csv", b"My export\nchapter,verse,meaning\n1,1,x\n"),
+                "column_mapping": json.dumps({"surah": 0, "ayah": 1, "text": 2}),
+            },
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("content_file_unparseable", body["error_name"])
+        self.assertIn("first row must be its header row", body["message"])
+
     def test_preview_import_columns_where_slug_unknown_should_return_text_asset_not_found(self):
         # Arrange
         self.authenticate_user(self.user)

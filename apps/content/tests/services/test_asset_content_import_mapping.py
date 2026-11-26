@@ -4,6 +4,8 @@ from apps.content.models import Asset, AssetTemplateChoice, CategoryChoice, Stat
 from apps.content.services.asset_content_import import (
     PREVIEW_BYTES,
     AssetContentColumnMappingError,
+    AssetContentHeaderNotFirstError,
+    AssetContentInvalidRowsError,
     AssetContentMissingColumnsError,
     AssetContentParseError,
     parse_content_file,
@@ -50,16 +52,25 @@ class ColumnsPreviewTests(QuranDataMixin, BaseTestCase):
         self.assertEqual(preview.samples, [["1", "1", "In the name"], ["1", "2", "Praise"], ["1", "3", "x"]])
         self.assertEqual(preview.unit_fields, ["surah", "ayah"])
 
-    def test_preview_content_columns_where_preamble_should_find_header_below_it(self):
-        # Arrange
+    def test_preview_content_columns_where_preamble_above_header_should_reject_the_file(self):
+        # Arrange — the header must be the first row: a title above it is not guessed past
         raw = b'"Exported from QuranEnc\nline two"\nid,surah,ayah,meaning\n1,1,1,x\n'
+
+        # Act / Assert
+        with self.assertRaises(AssetContentHeaderNotFirstError):
+            preview_content_columns(raw, self.spec, ["text"], truncated=False)
+
+    def test_preview_content_columns_where_text_row_before_data_should_flag_it(self):
+        # Arrange — ",,lost content" sits between the header and the data
+        raw = b"chapter,verse,meaning\n,,lost content\n1,2,Praise\n"
 
         # Act
         preview = preview_content_columns(raw, self.spec, ["text"], truncated=False)
 
         # Assert
-        self.assertEqual(preview.header_row, 2)
-        self.assertEqual(preview.mapping, {"surah": 1, "ayah": 2})
+        self.assertEqual(preview.header_row, 1)
+        self.assertEqual(preview.headers, ["chapter", "verse", "meaning"])
+        self.assertEqual(preview.attention_rows, [2])
 
     def test_preview_content_columns_where_truncated_should_drop_the_cut_line(self):
         # Arrange
@@ -116,13 +127,17 @@ class ColumnsPreviewTests(QuranDataMixin, BaseTestCase):
         self.assertEqual(preview.header_row, 1)
         self.assertEqual(preview.headers, ["chapter", "verse", "meaning", "notes"])
 
-    def test_preview_content_columns_where_no_data_row_should_raise_parse_error(self):
-        # Arrange — a header with nothing under it: there is no data to anchor the header to
-        raw = b"chapter,verse,meaning\n"
+    def test_preview_content_columns_where_truncated_prefix_has_no_data_row_should_use_the_first_row(self):
+        # Arrange — the prefix ends inside the first data row's long cell
+        raw = (b"chapter,verse,meaning\n1,1," + b"x" * PREVIEW_BYTES)[:PREVIEW_BYTES]
 
-        # Act / Assert
-        with self.assertRaises(AssetContentParseError):
-            preview_content_columns(raw, self.spec, ["text"], truncated=False)
+        # Act
+        preview = preview_content_columns(raw, self.spec, ["text"], truncated=True)
+
+        # Assert
+        self.assertEqual(preview.header_row, 1)
+        self.assertEqual(preview.headers, ["chapter", "verse", "meaning"])
+        self.assertEqual(preview.attention_rows, [])
 
     def test_preview_content_columns_where_file_has_no_header_row_should_raise_parse_error(self):
         # Arrange
@@ -181,12 +196,12 @@ class ColumnMappingImportTests(QuranDataMixin, BaseTestCase):
         # Assert
         self.assertEqual([(p.unit_id, p.cells) for p in parsed], [(self.ayah1.id, {"text": "new"})])
 
-    def test_parse_content_file_where_mapping_has_preamble_should_keep_file_row_numbers(self):
+    def test_parse_content_file_where_mapping_has_blank_lines_above_header_should_keep_file_row_numbers(self):
         # Arrange
-        raw = b"Exported\nchapter,verse,meaning\n1,1,x\n1,1,y\n"
+        raw = b"\n,,\nchapter,verse,meaning\n1,1,x\n1,1,y\n"
 
         # Act / Assert — the duplicate is reported at its row in the file
-        with self.assertRaisesMessage(Exception, "{4: 'duplicate'}"):
+        with self.assertRaisesMessage(Exception, "{5: 'duplicate'}"):
             parse_content_file(
                 raw,
                 self.spec,
@@ -256,12 +271,30 @@ class ColumnMappingImportTests(QuranDataMixin, BaseTestCase):
             [(self.ayah1.id, {"text": "First"}), (self.ayah2.id, {"text": "Second"})],
         )
 
-    def test_parse_content_file_where_mapping_and_no_data_row_should_raise_parse_error(self):
+    def test_parse_content_file_where_text_row_before_data_should_report_it(self):
         # Arrange
-        raw = b"Exported\nchapter,verse,meaning\n"
+        raw = b"chapter,verse,meaning\n,,lost content\n1,2,Praise\n"
+
+        # Act
+        with self.assertRaises(AssetContentInvalidRowsError) as raised:
+            parse_content_file(
+                raw,
+                self.spec,
+                self.asset,
+                column_keys=["text"],
+                strict=True,
+                column_mapping={"surah": 0, "ayah": 1, "text": 2},
+            )
+
+        # Assert
+        self.assertEqual(raised.exception.rows, {2: "unreadable"})
+
+    def test_parse_content_file_where_mapping_and_preamble_above_header_should_reject_the_file(self):
+        # Arrange
+        raw = b"Exported\nchapter,verse,meaning\n1,1,x\n"
 
         # Act / Assert
-        with self.assertRaises(AssetContentParseError):
+        with self.assertRaises(AssetContentHeaderNotFirstError):
             parse_content_file(
                 raw, self.spec, self.asset, column_keys=["text"], column_mapping={"surah": 0, "ayah": 1, "text": 2}
             )

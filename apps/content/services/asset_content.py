@@ -38,6 +38,7 @@ from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.content.services.asset_content_import import (
     AssetContentColumnMappingError,
+    AssetContentHeaderNotFirstError,
     AssetContentInvalidRowsError,
     AssetContentMissingColumnsError,
     AssetContentParseError,
@@ -169,6 +170,10 @@ def import_uploaded_file_into_entries(
         # Raised whatever `strict` says: the uploader asked for this mapping explicitly.
         logger.info(f"Column mapping rejected [version_id={version.pk}, fields={exc.fields}]")
         raise column_mapping_error(exc) from exc
+    except AssetContentHeaderNotFirstError as exc:
+        # Raised whatever `strict` says: only an explicit mapping applies this rule.
+        logger.info(f"Mapped upload has no header in its first row [version_id={version.pk}]")
+        raise header_not_first_error() from exc
     except AssetContentMissingColumnsError as exc:
         # Raised whatever `strict` says: a version missing a column would drop all its cells.
         logger.info(f"Uploaded file is missing columns [version_id={version.pk}, missing={exc.missing}]")
@@ -217,6 +222,17 @@ def source_group_keys(version: AssetVersion) -> set[int] | None:
         # The head keeps its full entries: read only the ranges, never the text.
         return unit_spec_for(asset).stored_ranges(head, with_text=True)
     return {unit_id for (unit_id, _key), text in AssetContentRepository().reconstruct_entries(head).items() if text}
+
+
+def header_not_first_error() -> ItqanError:
+    return ItqanError(
+        error_name="content_file_unparseable",
+        message=_(
+            "The file's first row must be its header row, naming each column. Remove any lines above it "
+            "and upload again."
+        ),
+        status_code=400,
+    )
 
 
 def column_mapping_error(exc: AssetContentColumnMappingError) -> ItqanError:
