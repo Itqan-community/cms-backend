@@ -34,3 +34,17 @@ def expire_publisher_member_invitations() -> int:
     expired_count = PublisherMemberInvitationService().expire_overdue_invitations()
     logger.info(f"Task completed [task=expire_publisher_member_invitations, expired={expired_count}]")
     return expired_count
+
+
+@shared_task(bind=True, max_retries=3)
+def send_publisher_inquiry_email(self, inquiry_id: int) -> None:
+    """Deliver a landing-page "contact us to join" request to the Fanar team; retries with linear back-off."""
+    logger.info(f"Task started [task=send_publisher_inquiry_email, inquiry_id={inquiry_id}]")
+    try:
+        from apps.publishers.services.publisher_inquiry import PublisherInquiryService
+
+        PublisherInquiryService().send_email(inquiry_id)
+        logger.info(f"Task completed [task=send_publisher_inquiry_email, inquiry_id={inquiry_id}]")
+    except Exception as exc:
+        logger.error(f"Task failed [task=send_publisher_inquiry_email, inquiry_id={inquiry_id}]: {exc}")
+        raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc

@@ -1191,6 +1191,9 @@ msgstr "هذا الإصدار غير مُزال."
 msgid "This package version has no downloadable content."
 msgstr "لا يحتوي إصدار الحزمة هذا على محتوى قابل للتنزيل."
 
+msgid "Thank you. We will get back to you soon."
+msgstr "شكرًا لك. سنتواصل معك قريبًا."
+
 msgid "You cannot change your own membership."
 msgstr "لا يمكنك تغيير عضويتك الخاصة."
 
@@ -1222,6 +1225,18 @@ msgstr "منتهي الصلاحية"
 msgid "Cancelled"
 msgstr "ملغي"
 
+msgid "Tafsirs or translations"
+msgstr "تفاسير أو ترجمات"
+
+msgid "More than one type"
+msgstr "أكثر من نوع"
+
+msgid "publisher inquiry"
+msgstr "طلب انضمام ناشر"
+
+msgid "publisher inquiries"
+msgstr "طلبات انضمام الناشرين"
+
 msgid "You do not have access to this publisher."
 msgstr "ليس لديك صلاحية الوصول لهذا الناشر"
 
@@ -1237,6 +1252,10 @@ msgstr "يوجد ناشر بالمعرّف '{slug}' بالفعل"
 
 msgid "Cannot delete Publisher because they are referenced through other objects"
 msgstr "لا يمكن حذف الناشر لأن هناك بيانات أخري مرتبطة به"
+
+#, python-brace-format
+msgid "Publisher inquiry: {organization}"
+msgstr "طلب انضمام ناشر: {organization}"
 
 msgid "This user is already a member of this publisher."
 msgstr "هذا المستخدم عضو بالفعل لدى هذا الناشر."
@@ -1858,6 +1877,25 @@ msgstr "تاريخ الطلب:"
 
 msgid "Review requests"
 msgstr "مراجعة الطلبات"
+
+msgid "New publisher inquiry"
+msgstr "طلب انضمام ناشر جديد"
+
+#, python-format
+msgid "<strong>%(name)s</strong> from <strong>%(organization)s</strong> wants to publish on Fanar."
+msgstr "<strong>%(name)s</strong> من <strong>%(organization)s</strong> يرغب في النشر على فنار."
+
+msgid "Email:"
+msgstr "البريد الإلكتروني:"
+
+msgid "Content:"
+msgstr "المحتوى:"
+
+msgid "Page language:"
+msgstr "لغة الصفحة:"
+
+msgid "Reply to this email to answer the sender directly."
+msgstr "ردّ على هذه الرسالة ليصل ردك إلى المرسل مباشرة."
 
 msgid "Account activated"
 msgstr "تم تفعيل الحساب"

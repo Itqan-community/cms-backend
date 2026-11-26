@@ -247,3 +247,34 @@ class MemberLanguage(BaseModel):
 
     def __str__(self):
         return f"MemberLanguage(member_id={self.member_id}, language={self.language})"
+
+
+class PublisherInquiry(BaseModel):
+    """A "contact us to join" request from the landing page's publisher form.
+
+    Kept so the team has a record even if the email to ``PUBLISHER_INQUIRY_EMAIL`` is lost;
+    staff read them in Django admin. Not tied to a Publisher: the sender has none yet.
+    """
+
+    class ContentKind(models.TextChoices):
+        RECITATIONS = "recitations", _("Recitations")
+        MUSHAFS = "mushafs", _("Mushafs")
+        TEXT = "text", _("Tafsirs or translations")
+        FONTS = "fonts", _("Fonts")
+        SEVERAL = "several", _("More than one type")
+
+    name = models.CharField(max_length=200)
+    organization = models.CharField(max_length=200)
+    email = models.EmailField(max_length=254)
+    content_kind = models.CharField(max_length=20, choices=ContentKind.choices)
+    message = models.TextField(blank=True, default="")
+    language = models.CharField(max_length=10, blank=True, default="", help_text="UI language of the page it came from")
+    emailed_at = models.DateTimeField(null=True, blank=True, help_text="When the email to the team was sent")
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = _("publisher inquiry")
+        verbose_name_plural = _("publisher inquiries")
+
+    def __str__(self) -> str:
+        return f"{self.organization} ({self.email})"

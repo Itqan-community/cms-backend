@@ -1,0 +1,18 @@
+{% extends "emails/base_message.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "New publisher inquiry" %}{% endblock title %}
+
+{% block heading %}{% trans "New publisher inquiry" %}{% endblock heading %}
+
+{% block content %}
+<p style="margin:0 0 24px;">{% blocktrans %}<strong>{{ name }}</strong> from <strong>{{ organization }}</strong> wants to publish on Fanar.{% endblocktrans %}</p>
+
+<p style="margin:0 0 8px;"><strong>{% trans "Email:" %}</strong> {{ email }}</p>
+<p style="margin:0 0 8px;"><strong>{% trans "Content:" %}</strong> {{ content_kind }}</p>
+<p style="margin:0 0 24px;"><strong>{% trans "Page language:" %}</strong> {{ language }}</p>
+
+{% if message %}<div style="margin:0 0 24px; padding:16px; background-color:#f4f8f6; border-radius:6px; white-space:pre-line;">{{ message }}</div>
+{% endif %}
+<p style="margin:0; color:#6e8782; font-size:14px;">{% trans "Reply to this email to answer the sender directly." %}</p>
+{% endblock content %}
