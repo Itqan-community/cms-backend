@@ -474,7 +474,10 @@ def _apply_column_mapping(
     """Rewrite the header row so each mapped column carries its field's canonical
     name and every other column is blank (ignored), overriding alias matching.
 
-    Rows above the header are blanked, so the parsers find this header row.
+    Rows above the header are blanked, so the parsers find this header row, and
+    so are the ignored cells of every data row: text in an ignored column must
+    not make a row count as content. Rows keep their positions and lengths, so
+    errors still name the right file row.
     """
     aliases = _field_aliases(spec, column_keys)
     unknown = [key for key in column_mapping if key not in aliases]
@@ -498,7 +501,9 @@ def _apply_column_mapping(
     header = [""] * width
     for key, index in chosen.items():
         header[index] = key
-    return [*([] for _ in range(header_index)), header, *rows[header_index + 1 :]]
+    kept = set(chosen.values())
+    data = [[cell if index in kept else "" for index, cell in enumerate(row)] for row in rows[header_index + 1 :]]
+    return [*([] for _ in range(header_index)), header, *data]
 
 
 @dataclass(frozen=True)

@@ -202,6 +202,38 @@ class ColumnMappingImportTests(QuranDataMixin, BaseTestCase):
         # Assert
         self.assertEqual([(p.unit_id, p.cells) for p in parsed], [(self.ayah1.id, {"question": "Q1", "answer": "A1"})])
 
+    def test_parse_content_file_where_ignored_column_has_text_on_a_blank_row_should_ignore_it(self):
+        # Arrange — row 3 only has text in the ignored "notes" column
+        raw = b"chapter,verse,meaning,notes\n1,1,x,\n,,,editor note\n"
+
+        # Act
+        parsed = parse_content_file(
+            raw,
+            self.spec,
+            self.asset,
+            column_keys=["text"],
+            strict=True,
+            column_mapping={"surah": 0, "ayah": 1, "text": 2},
+        )
+
+        # Assert
+        self.assertEqual([(p.unit_id, p.cells) for p in parsed], [(self.ayah1.id, {"text": "x"})])
+
+    def test_parse_content_file_where_mapped_row_unreadable_should_report_its_file_row(self):
+        # Arrange — row 3 has text in a mapped column but no surah
+        raw = b"chapter,verse,meaning,notes\n1,1,x,\n,1,orphan,n\n"
+
+        # Act / Assert
+        with self.assertRaisesMessage(Exception, "{3: 'unreadable'}"):
+            parse_content_file(
+                raw,
+                self.spec,
+                self.asset,
+                column_keys=["text"],
+                strict=True,
+                column_mapping={"surah": 0, "ayah": 1, "text": 2},
+            )
+
     def test_parse_content_file_where_mapping_misses_required_field_should_raise_incomplete(self):
         # Arrange
         raw = b"chapter,verse,meaning\n1,1,x\n"
