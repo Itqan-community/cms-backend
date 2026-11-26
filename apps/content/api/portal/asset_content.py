@@ -6,6 +6,9 @@ the draft / entries / publish / discard flow lives in a single place.
 
 from typing import Literal
 
+from django.db.models import F, IntegerField, OuterRef, Subquery
+from django.db.models.fields.json import KT
+from django.db.models.functions import Cast
 from django.http import HttpResponse, HttpResponseRedirect
 from django.utils.http import content_disposition_header
 from django.utils.translation import gettext_lazy as _
@@ -16,10 +19,12 @@ from pydantic import AwareDatetime, ConfigDict, Field, Json, model_validator
 
 from apps.content.models import (
     GROUP_TEMPLATES,
+    Asset,
     AssetTemplateChoice,
     AssetVersion,
     AssetVersionEntry,
     CategoryChoice,
+    ContentIssueReport,
     MushafLayout,
     VersionStateChoice,
 )
@@ -587,6 +592,105 @@ def list_entries(
         filters=filters.to_filters() if filters is not None else None,
     )
     return {"results": rows, "count": count}
+
+
+class GridIssueOut(Schema):
+    id: int
+    description: str
+    status: ContentIssueReport.StatusChoice
+    created_at: AwareDatetime
+
+
+class GridIssueGroupOut(Schema):
+    """The open issues reported on one ayah, and the grid row they land on."""
+
+    surah: int
+    ayah: int
+    unit_id: int | None = Field(
+        description=(
+            "The row the issues land on: the ayah's id (ayah template), the surah (surah template), the ayah's "
+            "first word (word template) or its page in the standard 604-page mushaf (page template). Null for "
+            "group templates, whose rows are matched by range, and for a page outside the asset's layout"
+        )
+    )
+    issues: list[GridIssueOut]
+
+
+OPEN_ISSUE_STATUSES = (ContentIssueReport.StatusChoice.PENDING, ContentIssueReport.StatusChoice.UNDER_REVIEW)
+
+
+def _issue_unit_annotation(asset: Asset) -> Subquery | F | None:
+    """The expression for the grid row an ayah-level issue lands on, by the asset's template.
+
+    Refers to the ``surah`` / ``ayah`` annotations of ``list_grid_issues``, so the row is found in the
+    same query as the issues.
+    """
+    the_ayah = Ayah.objects.filter(surah_id=OuterRef("surah"), number_in_surah=OuterRef("ayah"))
+    if asset.template == AssetTemplateChoice.SURAH:
+        return F("surah")
+    if asset.template == AssetTemplateChoice.AYAH:
+        return Subquery(the_ayah.values("id")[:1])
+    if asset.template == AssetTemplateChoice.WORD:
+        # Word-level assets: an ayah-level issue lands on the ayah's first word.
+        first_word = Word.objects.filter(
+            surah_id=OuterRef("surah"), ayah__number_in_surah=OuterRef("ayah"), position_in_ayah=1
+        )
+        return Subquery(first_word.values("id")[:1])
+    if asset.template == AssetTemplateChoice.PAGE:
+        return Subquery(the_ayah.values("page")[:1])
+    return None
+
+
+@router.get(
+    "content/{category}/{slug}/issues/",
+    response={
+        200: list[GridIssueGroupOut],
+        404: NinjaErrorResponse[Literal["text_asset_not_found"]]
+        | NinjaErrorResponse[Literal["unsupported_content_category"]],
+    },
+)
+def list_grid_issues(request: Request, category: str, slug: str):
+    """The asset's open (pending / under review) issue reports, grouped by surah:ayah, for the editor grid.
+
+    Issues apply to the asset, not to one language. Reports without a surah + ayah (filed before
+    locations were required) are left out: they have no row.
+    """
+    resolved = _resolve(category, request, access="read")
+    asset = AssetContentService()._get_asset_or_404(slug, resolved, publisher_q=request.publisher_q())
+    reports = (
+        ContentIssueReport.objects.filter(
+            asset=asset,
+            status__in=OPEN_ISSUE_STATUSES,
+            context__surah__isnull=False,
+            context__ayah__isnull=False,
+        )
+        .annotate(
+            surah=Cast(KT("context__surah"), IntegerField()),
+            ayah=Cast(KT("context__ayah"), IntegerField()),
+        )
+        .order_by("surah", "ayah", "created_at", "id")
+        .only("id", "description", "status", "created_at")
+    )
+    unit = _issue_unit_annotation(asset)
+    if unit is not None:
+        reports = reports.annotate(unit_id=unit)
+    page_count = asset.mushaf_layout.page_count if asset.template == AssetTemplateChoice.PAGE else None
+
+    groups: dict[tuple[int, int], dict] = {}
+    for report in reports:
+        group = groups.get((report.surah, report.ayah))
+        if group is None:
+            unit_id = getattr(report, "unit_id", None)
+            if page_count is not None and unit_id is not None and unit_id > page_count:
+                unit_id = None
+            group = groups[(report.surah, report.ayah)] = {
+                "surah": report.surah,
+                "ayah": report.ayah,
+                "unit_id": unit_id,
+                "issues": [],
+            }
+        group["issues"].append(report)
+    return list(groups.values())
 
 
 @router.patch(
