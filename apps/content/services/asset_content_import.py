@@ -439,18 +439,26 @@ def _auto_mapping(header: list[str], aliases: dict[str, frozenset[str] | set[str
     return found
 
 
+def _could_be_header(row: list[str]) -> bool:
+    """A header names its columns: it has a filled cell and no number-only cell,
+    which every data row has in its unit columns (surah, ayah, page, …)."""
+    cells = [cell.strip() for cell in row]
+    return any(cells) and not any(cell.isdigit() for cell in cells)
+
+
 def _locate_header_row(rows: list[list[str]], aliases: dict[str, frozenset[str] | set[str]]) -> int:
-    """The header row: the first row naming any known field, else the first row
-    with two or more filled cells (a header nothing matched), else the first
-    non-blank row. Only the first ``_HEADER_SCAN_ROWS`` rows are looked at, so
-    the full file and its preview agree."""
+    """The header row, among the rows that could be one (``_could_be_header``):
+    the first naming any known field, else the first with two or more filled
+    cells (a header nothing matched), else the first. A data row is never taken,
+    even when a text cell equals an alias such as ``text``. Only the first
+    ``_HEADER_SCAN_ROWS`` rows are looked at, so the full file and its preview agree."""
     known = set().union(*aliases.values())
-    scanned = rows[:_HEADER_SCAN_ROWS]
-    for index, row in enumerate(scanned):
+    candidates = [(index, row) for index, row in enumerate(rows[:_HEADER_SCAN_ROWS]) if _could_be_header(row)]
+    for index, row in candidates:
         if any(cell.strip().lower() in known for cell in row):
             return index
     for minimum in (2, 1):
-        for index, row in enumerate(scanned):
+        for index, row in candidates:
             if sum(1 for cell in row if cell.strip()) >= minimum:
                 return index
     raise AssetContentParseError("No header row found.")
