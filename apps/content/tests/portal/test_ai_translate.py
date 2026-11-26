@@ -262,6 +262,34 @@ class AiTranslateApiTests(BaseTestCase):
         self.assertEqual(403, response.status_code)
         self.assertEqual("permission_denied", response.json()["error_name"])
 
+    def test_ai_translate_where_user_can_only_edit_versions_should_translate_version_text(self):
+        # Version forms and the content editor's commit step: no create permission needed.
+        permissions = [
+            PermissionChoice.PORTAL_EDIT_TEXT_ASSET_CONTENT,
+            PermissionChoice.PORTAL_UPDATE_TEXT_ASSET,
+            PermissionChoice.PORTAL_UPDATE_MUSHAF,
+            PermissionChoice.PORTAL_UPDATE_FONT,
+        ]
+        for index, permission in enumerate(permissions):
+            with self.subTest(permission=permission):
+                # Arrange
+                user = User.objects.create_user(email=f"editor{index}@example.com", name="Editor", is_staff=True)
+                self.give_permission(user, permission)
+                self.authenticate_user(user)
+                payload = {"mode": "translate", "category": "text", "fields": {"version_summary": "تصحيح أخطاء"}}
+
+                # Act
+                with patch.object(
+                    GeminiClient,
+                    GeminiClient.generate_json.__name__,
+                    return_value={"version_summary": "Fix typos"},
+                ):
+                    response = self.client.post(URL, data=payload, content_type="application/json")
+
+                # Assert
+                self.assertEqual(200, response.status_code, response.content)
+                self.assertEqual({"version_summary": "Fix typos"}, response.json()["fields"])
+
     def test_ai_translate_where_slug_for_given_should_return_slug_from_the_same_call(self):
         # Arrange
         self.authenticate_user(self._admin())
