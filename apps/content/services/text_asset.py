@@ -221,6 +221,7 @@ class TextAssetService:
         file: Any = None,
         created_by_id: int | None = None,
         columns: list[ColumnInfo] | None = None,
+        column_mapping: dict[str, int | None] | None = None,
         **text_asset_kwargs: Any,
     ) -> Asset:
         """
@@ -228,8 +229,9 @@ class TextAssetService:
         version in a single atomic transaction.
 
         ``columns`` replace the default ``text`` column before the file is imported,
-        so the file may carry them. ``text_asset_kwargs`` are forwarded verbatim to
-        :meth:`create_text_asset`.
+        so the file may carry them. ``column_mapping`` (field -> file column index)
+        overrides the file's header matching. ``text_asset_kwargs`` are forwarded
+        verbatim to :meth:`create_text_asset`.
         """
         with transaction.atomic():
             text_asset = self.create_text_asset(**text_asset_kwargs)
@@ -242,6 +244,7 @@ class TextAssetService:
                     version_number=version_number,
                     file=file,
                     created_by_id=created_by_id,
+                    column_mapping=column_mapping,
                 )
         text_asset.refresh_from_db()
         return text_asset

@@ -82,6 +82,50 @@ class TextAssetCreateColumnsTest(BaseTestCase):
             {entry.column.key: entry.text for entry in version.entries.select_related("column")},
         )
 
+    def test_create_text_asset_where_column_mapping_given_should_import_mapped_columns(self):
+        # Arrange
+        self.give_column_permissions()
+        surah = baker.make(Surah, id=1, name="الفاتحة", ayahs_count=7)
+        baker.make(Ayah, id=1, surah=surah, number_in_surah=1, text="a")
+        csv = "chapter,verse,notes,q,a\n1,1,skip,ما البسملة؟,آية\n".encode()
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.post(
+            columns=json.dumps(QA_COLUMNS),
+            version_number="1.0",
+            file=SimpleUploadedFile("qa.csv", csv, content_type="text/csv"),
+            column_mapping=json.dumps({"surah": 0, "ayah": 1, "question": 3, "answer": 4}),
+        )
+
+        # Assert
+        self.assertEqual(201, response.status_code, response.content)
+        version = AssetVersion.objects.get(asset_id=response.json()["id"])
+        self.assertEqual(
+            {"question": "ما البسملة؟", "answer": "آية"},
+            {entry.column.key: entry.text for entry in version.entries.select_related("column")},
+        )
+
+    def test_create_text_asset_where_column_mapping_incomplete_should_return_400_and_create_nothing(self):
+        # Arrange
+        self.give_column_permissions()
+        self.authenticate_user(self.user)
+
+        # Act
+        response = self.post(
+            columns=json.dumps(QA_COLUMNS),
+            version_number="1.0",
+            file=SimpleUploadedFile("qa.csv", b"chapter,verse,q\n1,1,x\n", content_type="text/csv"),
+            column_mapping=json.dumps({"surah": 0, "ayah": 1, "question": 2}),
+        )
+
+        # Assert
+        self.assertEqual(400, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("column_mapping_incomplete", body["error_name"])
+        self.assertEqual(["answer"], body["extra"]["fields"])
+        self.assertFalse(Asset.objects.filter(name_en="Questions and Answers").exists())
+
     def test_create_text_asset_where_columns_given_without_manage_permission_should_return_403(self):
         # Arrange
         self.give_permission(self.user, PermissionChoice.PORTAL_ACCESS_ALL_LANGUAGES)
