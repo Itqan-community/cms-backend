@@ -37,6 +37,7 @@ Every non-2xx response from the Fanar API uses the same envelope. Build your err
 | 403 | `permission_denied` | Authenticated but not authorized | `null` |
 | 404 | `asset_not_found` | The asset in the path does not exist or is not offered through the API | `null` |
 | 404 | `not_found` | Any other resource that does not exist | `null` |
+| 423 | `publisher_closed` | The request names a publisher's domain (in `Origin` or `X-Tenant`) that is closed for maintenance | `null` |
 | 429 | `throttled` | Rate limit exceeded (see [Rate Limits](#rate-limits)) | `null` |
 | 4xx/5xx | `http_error` | Generic HTTP error path | `null` |
 | 500 | `internal_error` | Unhandled server exception | `null` |
