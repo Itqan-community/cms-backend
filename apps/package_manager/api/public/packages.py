@@ -11,6 +11,7 @@ from apps.content.models import REVIEWED_CATEGORIES, Asset, AssetAccessRequest, 
 from apps.content.repositories.access_request import AssetAccessRequestRepository
 from apps.content.services.asset_access import AssetAccessRequestService, enforce_asset_access_on_public_api
 from apps.content.services.asset_columns import version_structure
+from apps.content.timing_level import TIMING_LEVEL_DESCRIPTION, TimingLevel, timing_level
 from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -110,6 +111,11 @@ class PackageCatalogOut(Schema):
     )
     publisher_name: str | None = None
     languages: list[PackageLanguageOut]
+    timing_level: TimingLevel | None = Field(None, description=TIMING_LEVEL_DESCRIPTION)
+
+    @staticmethod
+    def resolve_timing_level(obj: Asset) -> TimingLevel | None:
+        return timing_level(getattr(obj, "has_ayah_timings", False))
 
     @staticmethod
     def resolve_access(obj: Asset) -> CatalogAccess:

@@ -100,9 +100,24 @@ class PackageCatalogApiTests(BaseTestCase):
                     {"language": "ar", "is_source": True, "latest_version": "1.2.0", "structure": text_structure},
                     {"language": "en", "is_source": False, "latest_version": "2.0.0", "structure": text_structure},
                 ],
+                "timing_level": None,
             },
             body["results"][0],
         )
+
+    def test_list_packages_where_text_asset_should_report_null_timing_level(self):
+        # Arrange
+        asset = self._asset("tafsir")
+        self._version(asset, "1.0")
+
+        # Act
+        response = self.client.get("/packages/")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        (item,) = response.json()["results"]
+        self.assertIn("timing_level", item)
+        self.assertIsNone(item["timing_level"])
 
     def test_list_packages_where_assets_are_not_installable_should_leave_them_out(self):
         # Arrange
