@@ -571,8 +571,22 @@ def preview_content_columns(
         prefix = prefix[: end + 1] if end >= 0 else prefix
     rows = _read_rows(prefix)
     aliases = _field_aliases(spec, column_keys)
-    # The same rule as the import, on a prefix that may end before any data row.
-    header_index = _locate_header_row(rows)
+    required = required_field_sets(spec, column_keys)
+    # A file whose header names every required field imports by name, without a
+    # mapping, so it keeps the name-matching header search (a preamble above the
+    # header is fine there). Only a file that needs a mapping gets the mapping's
+    # strict rule: the header is the first row.
+    header_index = next(
+        (
+            index
+            for index, row in enumerate(rows[:_HEADER_SCAN_ROWS])
+            if _complete(_auto_mapping(row, aliases), required)
+        ),
+        None,
+    )
+    if header_index is None:
+        # The same rule as a mapped import, on a prefix that may end before any data row.
+        header_index = _locate_header_row(rows)
     header = [cell.strip() for cell in rows[header_index]]
     samples = [
         [(cell or "").strip()[:_SAMPLE_CELL_CHARS] for cell in row]
@@ -584,7 +598,7 @@ def preview_content_columns(
         headers=header,
         samples=samples,
         unit_fields=list(_unit_aliases(spec)),
-        required=required_field_sets(spec, column_keys),
+        required=required,
         mapping=_auto_mapping(rows[header_index], aliases),
         attention_rows=_attention_rows(rows, header_index),
     )

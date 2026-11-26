@@ -60,6 +60,18 @@ class ColumnsPreviewTests(QuranDataMixin, BaseTestCase):
         with self.assertRaises(AssetContentHeaderNotFirstError):
             preview_content_columns(raw, self.spec, ["text"], truncated=False)
 
+    def test_preview_content_columns_where_preamble_above_a_fully_named_header_should_match_by_name(self):
+        # Arrange — a QuranEnc-style export: a preamble, then a header every field matches by name
+        raw = '"ترجمة معاني القرآن\nQuranEnc export"\nid,sura,aya,translation\n1,1,1,In the name\n'.encode()
+
+        # Act
+        preview = preview_content_columns(raw, self.spec, ["text"], truncated=False)
+
+        # Assert — no error and nothing to map, so the dialog stays closed
+        self.assertEqual(preview.header_row, 2)
+        self.assertEqual(preview.mapping, {"surah": 1, "ayah": 2, "text": 3})
+        self.assertTrue(preview.complete)
+
     def test_preview_content_columns_where_text_row_before_data_should_flag_it(self):
         # Arrange — ",,lost content" sits between the header and the data
         raw = b"chapter,verse,meaning\n,,lost content\n1,2,Praise\n"
