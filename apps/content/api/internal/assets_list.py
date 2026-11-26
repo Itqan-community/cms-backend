@@ -1,7 +1,7 @@
 import logging
 from typing import Annotated
 
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Q
 from ninja import FilterLookup, FilterSchema, Query, Schema
 from ninja.pagination import paginate
 from pydantic import Field
@@ -12,10 +12,10 @@ from apps.content.models import (
     AssetTemplateChoice,
     CategoryChoice,
     LicenseChoice,
-    RecitationAyahTiming,
     StatusChoice,
     consumer_visible_q,
 )
+from apps.content.timing_level import TIMING_LEVEL_DESCRIPTION, TimingLevel, has_ayah_timings_exists, timing_level
 from apps.core.ninja_utils.ordering_base import ordering
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -57,6 +57,11 @@ class ListAssetOut(Schema):
     template: AssetTemplateChoice | None = None
     mushaf_layout: AssetMushafLayoutOut | None = None
     has_ayah_timings: bool
+    timing_level: TimingLevel | None = Field(None, description=TIMING_LEVEL_DESCRIPTION)
+
+    @staticmethod
+    def resolve_timing_level(obj: Asset) -> TimingLevel | None:
+        return timing_level(obj.has_ayah_timings)
 
 
 class AssetFilter(FilterSchema):
@@ -95,9 +100,7 @@ def list_assets(request: Request, filters: AssetFilter = Query()):
         .filter(consumer_visible_q())
         .annotate(
             # Only qualities consumers can see count; a hidden quality's timings are withdrawn.
-            has_ayah_timings=Exists(
-                RecitationAyahTiming.objects.filter(track__asset=OuterRef("pk"), track__quality__is_visible=True)
-            )
+            has_ayah_timings=has_ayah_timings_exists(visible_qualities_only=True)
         )
     )
     assets = filters.filter(assets)

@@ -16,6 +16,7 @@ from apps.content.models import (
 )
 from apps.content.services.asset_access import AssetAccessStatus, get_access_status
 from apps.content.tasks import create_usage_event_task
+from apps.content.timing_level import TIMING_LEVEL_DESCRIPTION, TimingLevel, has_ayah_timings_exists, timing_level
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -83,6 +84,11 @@ class DetailAssetOut(Schema):
     package: DetailAssetPackageOut | None = Field(
         None, description="How to install the asset with the itqan CLI; null when the CLI can't install it."
     )
+    timing_level: TimingLevel | None = Field(None, description=TIMING_LEVEL_DESCRIPTION)
+
+    @staticmethod
+    def resolve_timing_level(obj: Asset) -> TimingLevel | None:
+        return timing_level(obj.has_ayah_timings)
 
     @staticmethod
     def resolve_package(obj: Asset) -> DetailAssetPackageOut | None:
@@ -127,7 +133,9 @@ def detail_assets(request: Request, id: int):
     """
     logger.info(f"Asset detail requested [asset_id={id}]")
     asset = get_object_or_404(
-        Asset.objects.select_related("publisher", "reciter", "mushaf_layout").prefetch_related("previews"),
+        Asset.objects.select_related("publisher", "reciter", "mushaf_layout")
+        .prefetch_related("previews")
+        .annotate(has_ayah_timings=has_ayah_timings_exists(visible_qualities_only=True)),
         request.publisher_q("publisher"),
         in_gallery=True,
         id=id,
