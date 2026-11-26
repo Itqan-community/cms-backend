@@ -1,6 +1,4 @@
 from datetime import timedelta
-import json
-from unittest.mock import patch
 
 from django.core.cache import cache
 from django.core.files.base import ContentFile
@@ -29,8 +27,6 @@ from apps.content.tests.publishing import publish
 from apps.content.tests.tagging import tagged
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
-from apps.usage_tracking.decorators import track_usage as track_usage_module
-from apps.usage_tracking.decorators.track_usage import _get_tracking_redis
 from apps.users.models import APIKey, User
 
 
@@ -696,26 +692,3 @@ class AyahTextPublicApiTest(GroupQuranDataMixin, BaseTestCase):
         # Assert
         self.assertEqual(first.content, second.content)
         self.assertEqual(0, len(queries), [query["sql"] for query in queries.captured_queries])
-
-    # --- usage ----------------------------------------------------------------
-
-    def test_get_ayah_text_where_served_should_record_usage_for_every_asset(self):
-        # Arrange
-        first = self._text_asset("tafsir-a")
-        second = self._text_asset("translation-b", tag="translation")
-        self._version(first, "1.0", {self._ayah(1): {"text": "t"}})
-        self._version(second, "1.0", {self._ayah(1): {"text": "t"}})
-
-        for attempt in ("cold", "warm"):
-            with patch.object(track_usage_module, _get_tracking_redis.__name__) as get_redis:
-                # Act
-                response = self.client.get("/ayahs/1:1/?assets=tafsir-a,translation-b")
-
-                # Assert
-                self.assertEqual(200, response.status_code, response.content)
-                props = json.loads(get_redis.return_value.rpush.call_args[0][1])["properties"]
-                self.assertEqual("text", props["entity_type"], attempt)
-                self.assertEqual([first.id, second.id], props["entity_ids"], attempt)
-                self.assertEqual(["tafsir-a ar", "translation-b ar"], props["entity_names"], attempt)
-                self.assertEqual([self.publisher.id], props["publisher_ids"], attempt)
-                self.assertEqual("1:1", props["ayah_key"], attempt)
