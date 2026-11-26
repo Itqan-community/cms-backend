@@ -439,11 +439,21 @@ def _auto_mapping(header: list[str], aliases: dict[str, frozenset[str] | set[str
     return found
 
 
+def _is_unit_number(cell: str) -> bool:
+    """Whether the parsers would read ``cell`` as a unit number. The same
+    ``int()`` they use, so ``+1``, `` 1`` and Arabic-Indic ``١`` count too."""
+    try:
+        int(cell.strip())
+    except ValueError:
+        return False
+    return True
+
+
 def _could_be_header(row: list[str]) -> bool:
-    """A header names its columns: it has a filled cell and no number-only cell,
-    which every data row has in its unit columns (surah, ayah, page, …)."""
+    """A header names its columns: it has a filled cell and no cell the parsers
+    would read as a number, which every data row has in its unit columns."""
     cells = [cell.strip() for cell in row]
-    return any(cells) and not any(cell.isdigit() for cell in cells)
+    return any(cells) and not any(_is_unit_number(cell) for cell in cells if cell)
 
 
 def _locate_header_row(rows: list[list[str]], aliases: dict[str, frozenset[str] | set[str]]) -> int:

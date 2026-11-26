@@ -94,6 +94,17 @@ class ColumnsPreviewTests(QuranDataMixin, BaseTestCase):
         self.assertEqual(preview.headers, ["chapter", "verse", "meaning"])
         self.assertEqual(preview.samples, [["1", "1", "text"], ["1", "2", "Praise"]])
 
+    def test_preview_content_columns_where_units_are_signed_or_arabic_indic_should_keep_the_real_header(self):
+        # Arrange — int() reads "+1" and "١" as numbers, so these rows are data
+        for raw in ("chapter,verse,meaning\n+1,+1,text\n1,2,Praise\n", "chapter,verse,meaning\n١,١,text\n1,2,Praise\n"):
+            with self.subTest(raw=raw):
+                # Act
+                preview = preview_content_columns(raw.encode(), self.spec, ["text"], truncated=False)
+
+                # Assert
+                self.assertEqual(preview.header_row, 1)
+                self.assertEqual(preview.headers, ["chapter", "verse", "meaning"])
+
     def test_preview_content_columns_where_file_has_no_header_row_should_raise_parse_error(self):
         # Arrange
         raw = b"1,1,In the name\n1,2,Praise\n"
@@ -169,6 +180,26 @@ class ColumnMappingImportTests(QuranDataMixin, BaseTestCase):
     def test_parse_content_file_where_data_cell_equals_an_alias_should_import_every_row(self):
         # Arrange
         raw = b"chapter,verse,meaning\n1,1,text\n1,2,Praise\n"
+
+        # Act
+        parsed = parse_content_file(
+            raw,
+            self.spec,
+            self.asset,
+            column_keys=["text"],
+            strict=True,
+            column_mapping={"surah": 0, "ayah": 1, "text": 2},
+        )
+
+        # Assert
+        self.assertEqual(
+            [(p.unit_id, p.cells) for p in parsed],
+            [(self.ayah1.id, {"text": "text"}), (self.ayah2.id, {"text": "Praise"})],
+        )
+
+    def test_parse_content_file_where_units_are_signed_should_import_every_row(self):
+        # Arrange
+        raw = b"chapter,verse,meaning\n+1,+1,text\n1,2,Praise\n"
 
         # Act
         parsed = parse_content_file(
