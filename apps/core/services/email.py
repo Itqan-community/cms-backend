@@ -42,6 +42,7 @@ class EmailService:
         template: str,
         context: dict[str, Any],
         language: str | None = None,
+        reply_to: list[str] | None = None,
     ) -> None:
         recipients = [addr for addr in recipients if addr]
         if not recipients:
@@ -62,7 +63,12 @@ class EmailService:
             plain_body = strip_tags(html_body)
             for addr in addresses:
                 msg = EmailMultiAlternatives(
-                    localized_subject, plain_body, settings.DEFAULT_FROM_EMAIL, [addr], connection=connection
+                    localized_subject,
+                    plain_body,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [addr],
+                    connection=connection,
+                    reply_to=reply_to,
                 )
                 msg.attach_alternative(html_body, "text/html")
                 messages.append(msg)
