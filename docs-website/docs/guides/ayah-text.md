@@ -77,7 +77,7 @@ The endpoint follows the same rules as the recitation endpoints:
 - Open assets need no API key.
 - Restricted assets need an API key (`X-API-Key`) whose owner holds an approved access request for **each** of them. Request access from the asset's page in the asset library.
 
-Each call counts as usage of every asset it returns.
+Each call counts as one API call in the usage reports. It is not split across the assets it returns.
 
 ## Errors
 
