@@ -328,3 +328,38 @@ class TestImportLogpush(BaseTestCase):
 
         # Assert
         assert (result.files_imported, result.error) == (1, "")
+
+
+@override_settings(**_SETTINGS)
+class TestTrackListUsageCount(BaseTestCase):
+    """The track list is counted once per request as one API call on its asset, whether
+    Cloudflare, Django's response cache or the database served it (QUESTIONS.md 49)."""
+
+    def test_import_logpush_where_track_list_served_from_each_cache_layer_should_count_one_api_call_each(self):
+        # Arrange: a CDN hit, a Django cache hit/miss (both "dynamic" at the edge), and a 304 revalidation
+        uri = "/recitations/42/?page=1"
+        lines = (
+            _line("hit", ClientRequestURI=uri, CacheCacheStatus="hit")
+            + _line("miss", ClientRequestURI=uri, CacheCacheStatus="miss")
+            + _line("dyn", ClientRequestURI=uri, CacheCacheStatus="dynamic")
+            + _line("rev", ClientRequestURI=uri, CacheCacheStatus="revalidated", EdgeResponseStatus=304)
+        )
+        files = {f"{PREFIX}20261018/a.log.gz": gzip.compress(lines)}
+        client = MagicMock(spec=R2LogsClient)
+        client.list_day_prefixes.return_value = [f"{PREFIX}20261018/"]
+        client.list_keys.side_effect = lambda prefix: sorted(k for k in files if k.startswith(prefix))
+        client.iter_lines.side_effect = lambda key: iter(gzip.decompress(files[key]).splitlines(keepends=True))
+
+        # Act
+        with patch.object(logpush_import, logpush_import._build_client.__name__, return_value=client):
+            result = import_logpush(NOW)
+
+        # Assert: one event name for every layer, and each request counted exactly once
+        assert (result.events, result.error) == (4, "")
+        events = TrafficEvent.objects.all()
+        assert {(e.kind, e.endpoint, e.asset_id) for e in events} == {
+            (TrafficKind.API_CALL, "/recitations/{asset_id}/", 42)
+        }
+        hourly = TrafficHourly.objects.filter(kind=TrafficKind.API_CALL, asset_id=42)
+        assert sum(row.sessions for row in hourly) == 4
+        assert sum(row.requests for row in hourly) == 4

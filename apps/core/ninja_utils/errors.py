@@ -13,7 +13,8 @@ class ItqanError(Exception):
         self.error_name = error_name
         self.message = str(message)
         self.status_code = status_code
-        self.extra = extra or {}
+        # Always null in the response when there are no details, never `{}`.
+        self.extra = extra or None
 
 
 class NinjaErrorResponse[ERROR_NAME: str, EXTRA_TYPE = None](Schema):

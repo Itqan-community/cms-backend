@@ -1,7 +1,18 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import connection
+from django.test import override_settings
+from django.test.utils import CaptureQueriesContext
 from model_bakery import baker
 
-from apps.content.models import Asset, AssetTemplateChoice, CategoryChoice, RecitationSurahTrack, StatusChoice
+from apps.content.models import (
+    Asset,
+    AssetAccess,
+    AssetAccessRequest,
+    AssetTemplateChoice,
+    CategoryChoice,
+    RecitationSurahTrack,
+    StatusChoice,
+)
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Publisher
 from apps.users.models import User
@@ -160,6 +171,7 @@ class RecitationTracksTest(BaseTestCase):
         # Non-existent asset
         response = self.client.get("/tenant/recitation-tracks/999999/")
         self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("asset_not_found", response.json()["error_name"])
 
         # Asset with non-RECITATION category should also 404 due to queryset filter
         non_recitation_asset = baker.make(
@@ -172,6 +184,7 @@ class RecitationTracksTest(BaseTestCase):
 
         response = self.client.get(f"/tenant/recitation-tracks/{non_recitation_asset.id}/")
         self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("asset_not_found", response.json()["error_name"])
 
         # Asset with RECITATION category but DRAFT status should 404
         draft_asset = baker.make(
@@ -185,3 +198,88 @@ class RecitationTracksTest(BaseTestCase):
 
         response = self.client.get(f"/tenant/recitation-tracks/{draft_asset.id}/")
         self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("asset_not_found", response.json()["error_name"])
+
+
+@override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True)
+class RestrictedRecitationTracksTest(BaseTestCase):
+    def setUp(self):
+        super().setUp()
+        self.publisher = baker.make(Publisher)
+        self.domain = baker.make("publishers.Domain", domain="restricted.example.com", publisher=self.publisher)
+        self.asset = baker.make(
+            Asset,
+            category=CategoryChoice.RECITATION,
+            publisher=self.publisher,
+            status=StatusChoice.READY,
+            is_open_access=False,
+            reciter=baker.make("content.Reciter", name="Restricted Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Restricted Riwayah"),
+        )
+        baker.make(
+            RecitationSurahTrack,
+            asset=self.asset,
+            quality=self.asset.recitation_qualities.get(is_default=True),
+            surah_number=1,
+            duration_ms=1000,
+            size_bytes=512,
+            audio_file=SimpleUploadedFile(name="test.mp3", content=b"dummy", content_type="audio/mpeg"),
+        )
+        self.user = User.objects.create_user(email="listener@example.com", name="Listener")
+
+    def _url(self) -> str:
+        return f"/tenant/recitation-tracks/{self.asset.id}/"
+
+    def test_list_recitation_tracks_where_restricted_and_anonymous_should_return_401(self):
+        # Arrange
+        self.authenticate_user(None, domain=self.domain)
+
+        # Act
+        response = self.client.get(self._url())
+
+        # Assert
+        self.assertEqual(401, response.status_code, response.content)
+        self.assertEqual("authentication_required", response.json()["error_name"])
+
+    def test_list_recitation_tracks_where_restricted_and_no_grant_should_return_403(self):
+        # Arrange
+        self.authenticate_user(self.user, domain=self.domain)
+
+        # Act
+        response = self.client.get(self._url())
+
+        # Assert
+        self.assertEqual(403, response.status_code, response.content)
+        self.assertEqual("access_denied", response.json()["error_name"])
+
+    def test_list_recitation_tracks_where_restricted_and_access_granted_should_return_200(self):
+        # Arrange
+        request = baker.make(
+            AssetAccessRequest,
+            developer_user=self.user,
+            asset=self.asset,
+            status=AssetAccessRequest.StatusChoice.APPROVED,
+        )
+        baker.make(AssetAccess, asset_access_request=request, user=self.user, asset=self.asset, expires_at=None)
+        self.authenticate_user(self.user, domain=self.domain)
+
+        # Act
+        response = self.client.get(self._url())
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual(1, response.json()["count"])
+
+    def test_list_recitation_tracks_where_open_access_should_add_no_access_query(self):
+        # Arrange
+        Asset.objects.filter(pk=self.asset.pk).update(is_open_access=True)
+        self.authenticate_user(None, domain=self.domain)
+        self.client.get(self._url())  # warm the domain cache
+
+        # Act
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(self._url())
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertFalse([q for q in ctx.captured_queries if "content_assetaccess" in q["sql"]])

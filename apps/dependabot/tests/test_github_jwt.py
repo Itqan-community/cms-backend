@@ -112,7 +112,7 @@ def test_issue_jwt_where_app_id_invalid_raises_misconfigured(rsa_keypair, bad_ap
         )
     assert exc_info.value.error_name == "github_app_misconfigured"
     assert exc_info.value.status_code == 500
-    assert exc_info.value.extra == {}
+    assert exc_info.value.extra is None
 
 
 @pytest.mark.parametrize("bad_key", ["", "   \n\t  "])
@@ -125,7 +125,7 @@ def test_issue_jwt_where_private_key_empty_raises_misconfigured(rsa_keypair, bad
             now=datetime(2026, 1, 1, tzinfo=UTC),
         )
     assert exc_info.value.error_name == "github_app_misconfigured"
-    assert exc_info.value.extra == {}
+    assert exc_info.value.extra is None
 
 
 @pytest.mark.parametrize(
@@ -152,7 +152,7 @@ def test_issue_jwt_where_private_key_malformed_raises_misconfigured_without_echo
             now=datetime(2026, 1, 1, tzinfo=UTC),
         )
     assert exc_info.value.error_name == "github_app_misconfigured"
-    assert exc_info.value.extra == {}
+    assert exc_info.value.extra is None
     # The bad-PEM body must never be echoed into the exception.
     assert "CANARY-MALFORMED-PEM" not in exc_info.value.message
     assert "not_base64_at_all" not in exc_info.value.message

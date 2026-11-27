@@ -1,11 +1,7 @@
-from unittest.mock import patch
-
 from apps.content.models import Asset, CategoryChoice, ContentIssueReport, Qiraah, Reciter, StatusChoice
 from apps.core.tests.base import BaseTestCase
 from apps.publishers.models import Domain, Publisher
 from apps.users.models import User
-
-_NOTIFY = "apps.content.services.issue_report_notifications.IssueReportNotificationService.notify_status_changed"
 
 
 class IssueReportTenantApiTests(BaseTestCase):
@@ -91,186 +87,46 @@ class IssueReportTenantApiTests(BaseTestCase):
 
         self.assertEqual(401, response.status_code)
 
-    # --- List ---
+    # --- Create only: existing reports are never readable or editable on a tenant domain ---
 
-    def test_list_issue_reports_tenant_filtering(self):
-        """Tenant API only returns reports scoped to the tenant's publisher assets"""
+    def test_list_issue_reports_where_anonymous_on_tenant_domain_should_not_be_served(self):
+        # Arrange
         self._create_report()
-        self._create_report(asset=self.asset2, description="Other Publisher Report")
-        self.authenticate_user(self.user, domain=self.domain)
-
-        response = self.client.get("/tenant/issue-reports/")
-
-        self.assertEqual(200, response.status_code)
-        data = response.json()
-        self.assertIn("results", data)
-        self.assertEqual(1, len(data["results"]))
-        self.assertEqual("Tenant Report", data["results"][0]["description"])
-
-    # --- Retrieve ---
-
-    def test_get_issue_report_by_id(self):
-        report = self._create_report()
-        self.authenticate_user(self.user, domain=self.domain)
-
-        response = self.client.get(f"/tenant/issue-reports/{report.id}/")
-
-        self.assertEqual(200, response.status_code)
-        data = response.json()
-        self.assertEqual(report.id, data["id"])
-        self.assertEqual(self.asset.id, data["asset_id"])
-
-    def test_get_issue_report_not_found_returns_404(self):
-        self.authenticate_user(self.user, domain=self.domain)
-
-        response = self.client.get("/tenant/issue-reports/9999/")
-
-        self.assertEqual(404, response.status_code)
-
-    # --- Update ---
-
-    def test_update_own_pending_report_description(self):
-        report = self._create_report()
-        self.authenticate_user(self.user, domain=self.domain)
-        payload = {"description": "Updated description text here."}
-
-        response = self.client.patch(f"/tenant/issue-reports/{report.id}/", payload, format="json")
-
-        self.assertEqual(200, response.status_code)
-        self.assertEqual("Updated description text here.", response.json()["description"])
-
-    def test_update_non_pending_report_returns_403(self):
-        report = self._create_report(status="resolved")
-        self.authenticate_user(self.user, domain=self.domain)
-        payload = {"description": "Trying to update resolved report."}
-
-        response = self.client.patch(f"/tenant/issue-reports/{report.id}/", payload, format="json")
-
-        self.assertEqual(403, response.status_code)
-
-    def test_update_other_users_report_returns_403(self):
-        other_user = User.objects.create_user(email="other@example.com", password="password123")
-        report = self._create_report(user=other_user)
-        self.authenticate_user(self.user, domain=self.domain)
-        payload = {"description": "Hijacking someone else's report."}
-
-        response = self.client.patch(f"/tenant/issue-reports/{report.id}/", payload, format="json")
-
-        self.assertEqual(403, response.status_code)
-
-    # --- Delete ---
-
-    def test_delete_own_pending_report(self):
-        report = self._create_report()
-        self.authenticate_user(self.user, domain=self.domain)
-
-        response = self.client.delete(f"/tenant/issue-reports/{report.id}/")
-
-        self.assertEqual(204, response.status_code)
-        self.assertFalse(ContentIssueReport.objects.filter(id=report.id).exists())
-
-    def test_delete_non_pending_report_returns_403(self):
-        report = self._create_report(status="resolved")
-        self.authenticate_user(self.user, domain=self.domain)
-
-        response = self.client.delete(f"/tenant/issue-reports/{report.id}/")
-
-        self.assertEqual(403, response.status_code)
-
-    def test_delete_other_users_report_returns_403(self):
-        other_user = User.objects.create_user(email="other2@example.com", password="password123")
-        report = self._create_report(user=other_user)
-        self.authenticate_user(self.user, domain=self.domain)
-
-        response = self.client.delete(f"/tenant/issue-reports/{report.id}/")
-
-        self.assertEqual(403, response.status_code)
-
-    def test_delete_unauthenticated_returns_401(self):
-        report = self._create_report()
         self.authenticate_user(None, domain=self.domain)
 
-        response = self.client.delete(f"/tenant/issue-reports/{report.id}/")
-
-        self.assertEqual(401, response.status_code)
-
-    # --- Notifications ---
-
-    def test_patch_description_does_not_call_notification_service(self):
-        """Tenant PATCH only accepts description; status changes are not possible."""
-        report = self._create_report()
-        self.authenticate_user(self.user, domain=self.domain)
-
-        with patch(_NOTIFY) as mock_notify:
-            response = self.client.patch(
-                f"/tenant/issue-reports/{report.id}/", {"description": "Updated description text."}, format="json"
-            )
-
-        self.assertEqual(200, response.status_code)
-        mock_notify.assert_not_called()
-
-    # --- Publisher scope ---
-
-    def test_get_issue_report_where_report_is_on_other_publisher_should_return_404(self):
-        # Arrange
-        report = self._create_report(asset=self.asset2)
-        self.authenticate_user(self.user, domain=self.domain)
-
         # Act
-        response = self.client.get(f"/tenant/issue-reports/{report.id}/")
+        response = self.client.get("/tenant/issue-reports/")
 
         # Assert
-        self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual("report_not_found", response.json()["error_name"])
+        self.assertEqual(405, response.status_code, response.content)
+        self.assertNotIn(b"Tenant Report", response.content)
 
-    def test_update_issue_report_where_report_is_on_other_publisher_should_return_404(self):
-        # Arrange
-        report = self._create_report(asset=self.asset2)
-        self.authenticate_user(self.user, domain=self.domain)
-
-        # Act
-        response = self.client.patch(
-            f"/tenant/issue-reports/{report.id}/", {"description": "Edited from another tenant."}, format="json"
-        )
-
-        # Assert
-        self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual("report_not_found", response.json()["error_name"])
-
-    def test_delete_issue_report_where_report_is_on_other_publisher_should_return_404(self):
-        # Arrange
-        report = self._create_report(asset=self.asset2)
-        self.authenticate_user(self.user, domain=self.domain)
-
-        # Act
-        response = self.client.delete(f"/tenant/issue-reports/{report.id}/")
-
-        # Assert
-        self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual("report_not_found", response.json()["error_name"])
-        self.assertTrue(ContentIssueReport.objects.filter(id=report.id).exists())
-
-    def test_list_issue_reports_where_no_tenant_domain_should_return_nothing(self):
+    def test_list_issue_reports_where_signed_in_on_tenant_domain_should_not_be_served(self):
         # Arrange
         self._create_report()
-        self._create_report(asset=self.asset2)
-        self.authenticate_user(self.user)
+        self.authenticate_user(self.user, domain=self.domain)
 
         # Act
         response = self.client.get("/tenant/issue-reports/")
 
         # Assert
-        self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual([], response.json()["results"])
+        self.assertEqual(405, response.status_code, response.content)
+        self.assertNotIn(b"Tenant Report", response.content)
 
-    def test_get_issue_report_where_no_tenant_domain_should_return_404(self):
+    def test_issue_report_detail_where_any_method_should_not_exist(self):
         # Arrange
         report = self._create_report()
-        self.authenticate_user(self.user)
+        self.authenticate_user(self.user, domain=self.domain)
+        url = f"/tenant/issue-reports/{report.id}/"
 
         # Act
-        response = self.client.get(f"/tenant/issue-reports/{report.id}/")
+        responses = {
+            "get": self.client.get(url),
+            "patch": self.client.patch(url, {"description": "Changed"}, format="json"),
+            "delete": self.client.delete(url),
+        }
 
         # Assert
-        self.assertEqual(404, response.status_code, response.content)
-        self.assertEqual("report_not_found", response.json()["error_name"])
+        self.assertEqual({"get": 404, "patch": 404, "delete": 404}, {k: r.status_code for k, r in responses.items()})
+        report.refresh_from_db()
+        self.assertEqual("Tenant Report", report.description)

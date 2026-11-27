@@ -329,3 +329,20 @@ class PublisherDomainLookupCacheTest(BaseTestCase):
         # Assert
         self.assertEqual(domain.pk, result.pk)
         self.assertEqual(0, len(queries))
+
+
+class PublisherClosedResponseTest(BaseTestCase):
+    def test_tenant_request_where_domain_is_inactive_should_return_423_in_standard_envelope(self) -> None:
+        # Arrange
+        publisher = baker.make(Publisher, slug="closed-pub")
+        baker.make(Domain, publisher=publisher, domain="closed.example.com", is_active=False)
+
+        # Act
+        response = self.client.get("/tenant/reciters/", headers={"X-Tenant": "closed.example.com"})
+
+        # Assert
+        self.assertEqual(423, response.status_code, response.content)
+        body = response.json()
+        self.assertEqual("publisher_closed", body["error_name"])
+        self.assertTrue(body["message"])
+        self.assertIsNone(body["extra"])

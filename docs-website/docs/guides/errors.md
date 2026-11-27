@@ -22,19 +22,22 @@ Every non-2xx response from the Fanar API uses the same envelope. Build your err
 |---|---|---|
 | `error_name` | string | **Stable machine identifier.** Switch on this in code, not on `message` or HTTP status. Never contains spaces. |
 | `message` | string | Human-readable description. Localized via `Accept-Language` — safe to display directly to users. |
-| `extra` | object or null | Optional structured detail. Shape varies by error type (see catalog below). |
+| `extra` | object, array or null | Optional structured detail. Shape varies by error type (see catalog below). It is `null` whenever an error has no details, never an empty object. |
 
 ## Error Catalog
 
 | HTTP | `error_name` | Triggered by | `extra` shape |
 |---|---|---|---|
-| 400 | `validation_error` | Invalid query parameters or request body | Array of field-level error objects |
+| 400 | `validation_error` | Invalid query parameters or request body, or values that don't make sense together (e.g. an ayah range whose `from` is after `to`). Validation errors always use `400` | Array of field-level error objects, or `null` |
+| 400 | `invalid_external_user_id` | The `X-External-User-Id` header is empty, too long, looks like personal data or has invalid characters | `null` |
 | 400 | `invalid_json` | Malformed JSON request body | `null` |
 | 401 | `authentication_error` | Missing or invalid credentials | `null` |
+| 401 | `invalid_api_key` | The `X-API-Key` header holds a key that does not exist, was revoked or has expired. Calls without the header are not affected | `null` |
 | 401 | `token_not_valid` | Expired or revoked JWT token | `null` |
 | 403 | `permission_denied` | Authenticated but not authorized | `null` |
-| 404 | `not_found` | Resource does not exist | `null` |
-| 422 | `validation_error` | The request is well-formed but its values don't make sense together, e.g. an ayah range whose `from` is after `to` or past the end of the surah. `message` says what is wrong | `{}` |
+| 404 | `asset_not_found` | The asset in the path does not exist or is not offered through the API | `null` |
+| 404 | `not_found` | Any other resource that does not exist | `null` |
+| 423 | `publisher_closed` | The request names a publisher's domain (in `Origin` or `X-Tenant`) that is closed for maintenance | `null` |
 | 429 | `throttled` | Rate limit exceeded (see [Rate Limits](#rate-limits)) | `null` |
 | 4xx/5xx | `http_error` | Generic HTTP error path | `null` |
 | 500 | `internal_error` | Unhandled server exception | `null` |
@@ -42,9 +45,9 @@ Every non-2xx response from the Fanar API uses the same envelope. Build your err
 
 ### `validation_error` Extra Shape
 
-`extra` depends on the status code, so check its type before reading it:
+`extra` depends on what failed, so check its type before reading it:
 
-- **400**: an array of field-level error objects, one per invalid parameter or body field:
+- **A parameter or body field is invalid**: an array of field-level error objects, one per invalid field:
 
 ```json
 {
@@ -56,17 +59,25 @@ Every non-2xx response from the Fanar API uses the same envelope. Build your err
 }
 ```
 
-- **422**: an empty object. Each value is valid on its own but they don't make sense together, and `message` says what is wrong:
+- **The values don't make sense together**: `null`. Each value is valid on its own, and `message` says what is wrong:
 
 ```json
 {
   "error_name": "validation_error",
   "message": "Invalid ayah range: from (5) must not exceed to (3).",
-  "extra": {}
+  "extra": null
 }
 ```
 
 Show `message` in both cases. Read field errors from `extra` only when it is an array.
+
+### Not-found codes
+
+A 404 names what is missing:
+
+- `asset_not_found`: the asset named in the path (by id or slug) does not exist, is not offered through the API, or has nothing published. Every endpoint uses this name for it.
+- A narrower name when the asset exists but a part of it does not: `track_not_found` (no track for that surah), `quality_not_found`, `ayah_not_found`, `language_not_found`, `version_not_found`.
+- `not_found` for anything else.
 
 ## Client Handling
 
@@ -86,11 +97,12 @@ async function apiFetch(url, options = {}) {
   const error = await resp.json();
 
   switch (error.error_name) {
+    case "asset_not_found":
     case "not_found":
       // Resource doesn't exist — handle gracefully
       return null;
     case "validation_error":
-      // Always show message; extra lists field errors on 400 and is {} on 422
+      // Always show message; extra is a list of field errors or null
       throw new ValidationError(error.message, Array.isArray(error.extra) ? error.extra : []);
     case "authentication_error":
     case "token_not_valid":
@@ -121,10 +133,10 @@ def api_fetch(url):
         error = json.load(e)
         name = error.get("error_name")
 
-        if name == "not_found":
+        if name in ("asset_not_found", "not_found"):
             return None
         elif name == "validation_error":
-            # Always keep message; extra lists field errors on 400 and is {} on 422
+            # Always keep message; extra is a list of field errors or null
             fields = error["extra"] if isinstance(error.get("extra"), list) else []
             raise ValueError(f"Validation failed: {error['message']}", fields)
         elif name in ("authentication_error", "token_not_valid"):

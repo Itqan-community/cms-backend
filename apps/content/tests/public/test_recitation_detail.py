@@ -118,6 +118,7 @@ class RecitationTracksTest(BaseTestCase):
         # Non-existent asset
         response = self.client.get("/recitations/999999/")
         self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("asset_not_found", response.json()["error_name"])
 
         # Asset with wrong category should also 404 due to queryset filter
         non_recitation_asset = baker.make(
@@ -130,6 +131,7 @@ class RecitationTracksTest(BaseTestCase):
 
         response = self.client.get(f"/recitations/{non_recitation_asset.id}/")
         self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("asset_not_found", response.json()["error_name"])
 
         # Asset with RECITATION category but DRAFT status should 404
         draft_asset = baker.make(
@@ -143,6 +145,7 @@ class RecitationTracksTest(BaseTestCase):
 
         response = self.client.get(f"/recitations/{draft_asset.id}/")
         self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("asset_not_found", response.json()["error_name"])
 
     def test_list_recitation_tracks_where_timings_exist_should_embed_timings(self):
         # Arrange

@@ -3,7 +3,7 @@ from typing import Literal
 
 from django.core.cache import cache
 from django.db.models import Q
-from django.http import Http404, HttpResponse
+from django.http import HttpResponse
 from django.utils.translation import gettext_lazy as _
 from ninja import Query, Schema
 from pydantic import Field
@@ -20,7 +20,7 @@ from apps.content.services.asset_access import enforce_asset_access_on_public_ap
 from apps.content.services.recitation import RecitationService
 from apps.content.services.recitation_quality_resolution import reject_renamed_folder_param
 from apps.core.mixins.constants import QURAN_SURAHS
-from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.paginations import DEFAULT_PAGE_SIZE, PUBLIC_RECITATION_MAX_PAGE_SIZE
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
@@ -63,7 +63,7 @@ class RecitationSurahTrackPageOut(Schema):
         200: RecitationSurahTrackPageOut,
         401: NinjaErrorResponse[Literal["authentication_required"]],
         403: NinjaErrorResponse[Literal["access_denied"]],
-        404: NinjaErrorResponse[Literal["not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
     },
 )
 def list_recitation_tracks(
@@ -104,7 +104,11 @@ def list_recitation_tracks(
 
     asset = repo.get_asset_object(asset_id, Q(in_public_api=True))
     if not asset:
-        raise Http404(str(_("No asset matches the given query.")))
+        raise ItqanError(
+            error_name="asset_not_found",
+            message=_("Asset with id {id} not found.").format(id=asset_id),
+            status_code=404,
+        )
 
     enforce_asset_access_on_public_api(getattr(request, "user", None), asset)
 

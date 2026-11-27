@@ -1,6 +1,5 @@
 from typing import Literal
 
-from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from ninja import Schema
 
@@ -63,7 +62,7 @@ class RecommendedAssetOut(Schema):
     "recommendations/similar/{asset_id}/",
     response={
         200: list[RecommendedAssetOut],
-        404: NinjaErrorResponse[Literal["not_found"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]],
     },
 )
 def get_similar_recommendations(request: Request, asset_id: int):
@@ -86,7 +85,11 @@ def get_similar_recommendations(request: Request, asset_id: int):
         in_public_api=True,
     ).exists()
     if not source_exists:
-        raise Http404(str(_("No asset matches the given query.")))
+        raise ItqanError(
+            error_name="asset_not_found",
+            message=_("Asset with id {id} not found.").format(id=asset_id),
+            status_code=404,
+        )
 
     similar_ids = get_similar_asset_ids(asset_id)
     return hydrate_visible_assets_in_order(similar_ids)

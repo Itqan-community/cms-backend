@@ -22,8 +22,13 @@ class PublisherMiddleware:
         if active is None:
             pass
         elif not active:
+            # Runs before any API, so it builds the standard error envelope by hand.
             return JsonResponse(
-                {"error": _("Publisher's page is closed for maintenance, please try again later")},
+                {
+                    "error_name": "publisher_closed",
+                    "message": _("Publisher's page is closed for maintenance, please try again later"),
+                    "extra": None,
+                },
                 status=status.HTTP_423_LOCKED,
             )
 

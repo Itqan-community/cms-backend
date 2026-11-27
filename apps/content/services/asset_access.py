@@ -63,7 +63,7 @@ class AssetAccessRequestService:
     @transaction.atomic
     def reject(self, user: User, request_id: int, reason: str) -> AssetAccessRequest:
         if not (reason or "").strip():
-            raise ItqanError("validation_error", _("Rejection reason is required."), status_code=422)
+            raise ItqanError("validation_error", _("Rejection reason is required."), status_code=400)
         req = self.get_for_user(user, request_id, for_update=True)
         self._guard_pending(req)
         self.repo.mark_rejected(req, rejected_by=user, reason=reason.strip())

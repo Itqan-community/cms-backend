@@ -77,18 +77,19 @@ curl {{API_BASE}}/reciters/ \
 The identifier may contain letters, numbers, `.`, `_`, `:`, and `-`, must start
 with a letter or number, and may be up to 64 characters long. Values that are
 empty, contain an email address, resemble a phone number, or use other invalid
-characters are rejected with a `422` response.
+characters are rejected with `400 invalid_external_user_id`.
 
 ## Errors
 
-A missing or invalid key returns an error in the [standard error format](/docs/guides/errors):
+Key errors use the [standard error format](/docs/guides/errors):
 
-| Status | Meaning | Fix |
-|--------|---------|-----|
-| `401 Unauthorized` | Key is missing or malformed | Add a valid `X-API-Key` header |
-| `403 Forbidden` | Key is valid but not allowed for this resource | Check the key's permissions in the Asset Library |
+| Status | `error_name` | Meaning | Fix |
+|--------|--------------|---------|-----|
+| `401 Unauthorized` | `invalid_api_key` | The `X-API-Key` header is set, but the key does not exist, was revoked or has expired | Create a new key in the Asset Library, or drop the header to call as an anonymous client |
+| `401 Unauthorized` | `authentication_required` | The resource needs a key and none was sent | Add a valid `X-API-Key` header |
+| `403 Forbidden` | `access_denied` | The key is valid but its account has no access to this resource | Request access to the asset in the Asset Library |
 
-Existing integrations against public read endpoints continue to work without disruption while the key requirement is phased in.
+Public read endpoints still work without a key. A key that is sent is always checked: an invalid one is rejected with `401 invalid_api_key` and is never treated as an anonymous call.
 
 ---
 

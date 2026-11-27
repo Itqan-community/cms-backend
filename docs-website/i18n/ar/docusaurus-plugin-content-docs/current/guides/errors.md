@@ -22,28 +22,31 @@ description: غلاف الخطأ الموحّد وكتالوج الأخطاء ا
 |---|---|---|
 | `error_name` | نص | **معرّف آلي ثابت.** قم بتحويل معالجة الأخطاء بناءً عليه، ليس على `message` أو حالة HTTP. لا يحتوي على مسافات. |
 | `message` | نص | وصف قابل للقراءة البشرية. مُحلَّل عبر `Accept-Language` — آمن للعرض مباشرة للمستخدمين. |
-| `extra` | كائن أو null | تفاصيل منظمة اختيارية. الشكل يختلف حسب نوع الخطأ (انظر الكتالوج أدناه). |
+| `extra` | كائن أو مصفوفة أو null | تفاصيل منظمة اختيارية. الشكل يختلف حسب نوع الخطأ (انظر الكتالوج أدناه). تكون `null` كلما لم يكن للخطأ تفاصيل، ولا تكون كائناً فارغاً أبداً. |
 
 ## كتالوج الأخطاء
 
 | HTTP | `error_name` | المُشغِّل | شكل `extra` |
 |---|---|---|---|
-| 400 | `validation_error` | معاملات استعلام أو جسم طلب غير صحيح | مصفوفة من كائنات الخطأ على مستوى الحقل |
+| 400 | `validation_error` | معاملات استعلام أو جسم طلب غير صحيح، أو قيم لا تستقيم معًا (مثل نطاق آيات يأتي فيه `from` بعد `to`). أخطاء التحقق تستخدم `400` دائمًا | مصفوفة من كائنات الخطأ على مستوى الحقل، أو `null` |
+| 400 | `invalid_external_user_id` | ترويسة `X-External-User-Id` فارغة أو طويلة جدًا أو تشبه بيانات شخصية أو تحتوي أحرفًا غير صالحة | `null` |
 | 400 | `invalid_json` | جسم طلب JSON مشوَّه | `null` |
 | 401 | `authentication_error` | بيانات اعتماد مفقودة أو غير صحيحة | `null` |
+| 401 | `invalid_api_key` | ترويسة `X-API-Key` تحمل مفتاحاً غير موجود أو مُلغى أو منتهي الصلاحية. الطلبات التي لا ترسل الترويسة لا تتأثر | `null` |
 | 401 | `token_not_valid` | توكن JWT منتهي الصلاحية أو مُلغى | `null` |
 | 403 | `permission_denied` | مُصادَق عليه لكن غير مُخوَّل | `null` |
-| 404 | `not_found` | المورد غير موجود | `null` |
-| 422 | `validation_error` | الطلب سليم الصياغة لكن قيمه لا تستقيم معًا، مثل نطاق آيات يأتي فيه `from` بعد `to` أو يتجاوز نهاية السورة. يبيّن `message` موضع الخطأ | `{}` |
+| 404 | `asset_not_found` | الأصل المذكور في المسار غير موجود أو غير متاح عبر الواجهة | `null` |
+| 404 | `not_found` | أي مورد آخر غير موجود | `null` |
+| 423 | `publisher_closed` | الطلب يذكر نطاق ناشر (في `Origin` أو `X-Tenant`) مغلقًا للصيانة | `null` |
 | 4xx/5xx | `http_error` | مسار خطأ HTTP عام | `null` |
 | 500 | `internal_error` | استثناء خادم غير معالَج | `null` |
 | متغير | *(مخصص)* | خطأ منطق أعمال عبر `ItqanError` | خاص بكل نقطة نهاية؛ موثَّق في صفحة المرجع الخاصة بها |
 
 ### شكل `extra` لـ `validation_error`
 
-يختلف شكل `extra` باختلاف رمز الحالة، فتحقّق من نوعه قبل قراءته:
+يختلف شكل `extra` باختلاف سبب الخطأ، فتحقّق من نوعه قبل قراءته:
 
-- **400**: مصفوفة من كائنات الخطأ على مستوى الحقل، كائن لكل معامل أو حقل غير صحيح:
+- **معامل أو حقل غير صحيح**: مصفوفة من كائنات الخطأ على مستوى الحقل، كائن لكل معامل أو حقل غير صحيح:
 
 ```json
 {
@@ -55,17 +58,25 @@ description: غلاف الخطأ الموحّد وكتالوج الأخطاء ا
 }
 ```
 
-- **422**: كائن فارغ. كل قيمة صحيحة بمفردها لكنها لا تستقيم معًا، ويبيّن `message` موضع الخطأ:
+- **قيم لا تستقيم معًا**: `null`. كل قيمة صحيحة بمفردها، ويبيّن `message` موضع الخطأ:
 
 ```json
 {
   "error_name": "validation_error",
   "message": "نطاق الآيات غير صالح: من (5) يجب ألا تتجاوز إلى (3).",
-  "extra": {}
+  "extra": null
 }
 ```
 
 اعرض `message` في الحالتين، ولا تقرأ أخطاء الحقول من `extra` إلا إذا كان مصفوفة.
+
+### رموز «غير موجود»
+
+يسمّي الخطأ 404 الشيء المفقود:
+
+- `asset_not_found`: الأصل المذكور في المسار (بالمعرّف أو بالاسم المختصر slug) غير موجود، أو غير متاح عبر الواجهة، أو ليس له إصدار منشور. كل نقاط النهاية تستخدم هذا الاسم لهذه الحالة.
+- اسم أدق حين يكون الأصل موجودًا وجزء منه مفقودًا: `track_not_found` (لا يوجد مسار صوتي لهذه السورة)، `quality_not_found`، `ayah_not_found`، `language_not_found`، `version_not_found`.
+- `not_found` لأي شيء آخر.
 
 ## معالجة جانب العميل
 
@@ -85,10 +96,11 @@ async function apiFetch(url, options = {}) {
   const error = await resp.json();
 
   switch (error.error_name) {
+    case "asset_not_found":
     case "not_found":
       return null;
     case "validation_error":
-      // اعرض message دائمًا؛ extra يسرد أخطاء الحقول في 400 وهو {} في 422
+      // اعرض message دائمًا؛ extra إما قائمة بأخطاء الحقول أو null
       throw new ValidationError(error.message, Array.isArray(error.extra) ? error.extra : []);
     case "authentication_error":
     case "token_not_valid":
@@ -116,10 +128,10 @@ def api_fetch(url):
         error = json.load(e)
         name = error.get("error_name")
 
-        if name == "not_found":
+        if name in ("asset_not_found", "not_found"):
             return None
         elif name == "validation_error":
-            # احتفظ بـ message دائمًا؛ extra يسرد أخطاء الحقول في 400 وهو {} في 422
+            # احتفظ بـ message دائمًا؛ extra إما قائمة بأخطاء الحقول أو null
             fields = error["extra"] if isinstance(error.get("extra"), list) else []
             raise ValueError(f"فشل التحقق: {error['message']}", fields)
         elif name in ("authentication_error", "token_not_valid"):

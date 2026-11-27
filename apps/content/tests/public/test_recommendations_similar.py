@@ -117,6 +117,7 @@ class SimilarRecommendationsEndpointTest(BaseTestCase):
         response = self.client.get("/recommendations/similar/999999/")
 
         self.assertEqual(404, response.status_code)
+        self.assertEqual("asset_not_found", response.json()["error_name"])
 
     def test_draft_asset_returns_404(self):
         draft = baker.make(

@@ -136,10 +136,10 @@ def accept_access_request(request: Request, request_id: int):
     "access-requests/{int:request_id}/reject/",
     response={
         200: AccessRequestDetailOut,
+        400: NinjaErrorResponse[Literal["validation_error"]],
         403: NinjaErrorResponse,
         404: NinjaErrorResponse[Literal["not_found"]],
         409: NinjaErrorResponse[Literal["invalid_status"]],
-        422: NinjaErrorResponse[Literal["validation_error"]],
     },
 )
 @permission_required([permission_class(PermissionChoice.PORTAL_ACCEPT_OR_REJECT_ACCESS_REQUESTS)])

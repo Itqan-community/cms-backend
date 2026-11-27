@@ -3,7 +3,7 @@ from typing import Literal
 
 from django.core.cache import cache
 from django.db.models import Q
-from django.http import Http404, HttpResponse
+from django.http import HttpResponse
 from django.utils.translation import gettext_lazy as _
 from ninja import Query, Schema
 
@@ -19,7 +19,7 @@ from apps.content.services.asset_access import enforce_asset_access_on_public_ap
 from apps.content.services.recitation import RecitationService
 from apps.content.services.recitation_quality_resolution import reject_renamed_folder_param
 from apps.content.services.recitation_range import RecitationRangeService
-from apps.core.ninja_utils.errors import NinjaErrorResponse
+from apps.core.ninja_utils.errors import ItqanError, NinjaErrorResponse
 from apps.core.ninja_utils.request import Request
 from apps.core.ninja_utils.router import ItqanRouter
 from apps.core.ninja_utils.tags import NinjaTag
@@ -56,12 +56,13 @@ class RecitationRangeOut(Schema):
 @router.get(
     "recitations/{asset_id}/{surah_number}/range/",
     response={
-        400: NinjaErrorResponse[Literal["folder_param_renamed"]],
+        400: NinjaErrorResponse[Literal["folder_param_renamed"]] | NinjaErrorResponse[Literal["validation_error"]],
         200: RecitationRangeOut,
         401: NinjaErrorResponse[Literal["authentication_required"]],
         403: NinjaErrorResponse[Literal["access_denied"]],
-        404: NinjaErrorResponse[Literal["not_found"]] | NinjaErrorResponse[Literal["quality_not_found"]],
-        422: NinjaErrorResponse[Literal["validation_error"]],
+        404: NinjaErrorResponse[Literal["asset_not_found"]]
+        | NinjaErrorResponse[Literal["track_not_found"]]
+        | NinjaErrorResponse[Literal["quality_not_found"]],
     },
 )
 def get_recitation_range(
@@ -103,7 +104,11 @@ def get_recitation_range(
 
     asset = repo.get_asset_object(asset_id, Q(in_public_api=True))
     if not asset:
-        raise Http404(str(_("No asset matches the given query.")))
+        raise ItqanError(
+            error_name="asset_not_found",
+            message=_("Asset with id {id} not found.").format(id=asset_id),
+            status_code=404,
+        )
 
     enforce_asset_access_on_public_api(getattr(request, "user", None), asset)
 
@@ -116,7 +121,7 @@ def get_recitation_range(
         "is_open_access": asset.is_open_access,
     }
 
-    # Validate the range (422 on bad order/bounds/gaps) and resolve track+quality.
+    # Validate the range (400 on bad order/bounds/gaps) and resolve track+quality.
     track, resolved_quality, subset, start_ms, end_ms = service.get_range_segment(
         asset_id,
         surah_number,

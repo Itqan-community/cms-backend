@@ -179,7 +179,7 @@ class PackageAccountTests(BaseTestCase):
 
         # Assert
         self.assertEqual(401, response.status_code, response.content)
-        self.assertEqual("authentication_required", response.json()["error_name"])
+        self.assertEqual("invalid_api_key", response.json()["error_name"])
 
 
 @override_settings(ENFORCE_ASSET_ACCESS_ON_PUBLIC_API=True, FRONTEND_BASE_URL="https://cms.example")
@@ -304,7 +304,7 @@ class PackageRequestAccessTests(BaseTestCase):
 
     def test_request_access_where_intended_use_invalid_or_purpose_blank_should_be_rejected(self):
         self.assertEqual(400, self._post(body={"intended_use": "hobby"}).status_code)
-        self.assertEqual(422, self._post(body={"intended_use": "commercial", "purpose": "  "}).status_code)
+        self.assertEqual(400, self._post(body={"intended_use": "commercial", "purpose": "  "}).status_code)
 
     def test_request_access_where_purpose_omitted_should_use_default(self):
         response = self._post(body={"intended_use": "commercial"})

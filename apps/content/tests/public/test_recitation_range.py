@@ -142,7 +142,7 @@ class RecitationRangeTest(BaseTestCase):
         self.assertEqual(200, second.status_code, second.content)
         self.assertEqual(first.content, second.content)
 
-    def test_get_range_where_from_exceeds_to_should_return_422(self):
+    def test_get_range_where_from_exceeds_to_should_return_400(self):
         # Arrange
         self.authenticate_client(self.app)
 
@@ -150,10 +150,10 @@ class RecitationRangeTest(BaseTestCase):
         response = self.client.get(self._url(query="from=3&to=1"))
 
         # Assert
-        self.assertEqual(422, response.status_code, response.content)
+        self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("validation_error", response.json()["error_name"])
 
-    def test_get_range_where_to_exceeds_surah_ayah_count_should_return_422(self):
+    def test_get_range_where_to_exceeds_surah_ayah_count_should_return_400(self):
         # Arrange: surah 1 has 7 ayahs; to=8 is outside the surah.
         self.authenticate_client(self.app)
 
@@ -161,10 +161,10 @@ class RecitationRangeTest(BaseTestCase):
         response = self.client.get(self._url(query="from=1&to=8"))
 
         # Assert
-        self.assertEqual(422, response.status_code, response.content)
+        self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("validation_error", response.json()["error_name"])
 
-    def test_get_range_where_timing_gap_should_return_422(self):
+    def test_get_range_where_timing_gap_should_return_400(self):
         # Arrange: delete the middle timing so 1-3 has a gap.
         RecitationAyahTiming.objects.filter(track=self.track, ayah_key="1:2").delete()
         self.authenticate_client(self.app)
@@ -173,7 +173,7 @@ class RecitationRangeTest(BaseTestCase):
         response = self.client.get(self._url(query="from=1&to=3"))
 
         # Assert
-        self.assertEqual(422, response.status_code, response.content)
+        self.assertEqual(400, response.status_code, response.content)
         self.assertEqual("validation_error", response.json()["error_name"])
 
     def test_get_range_where_asset_missing_should_return_404(self):
@@ -185,6 +185,7 @@ class RecitationRangeTest(BaseTestCase):
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("asset_not_found", response.json()["error_name"])
 
     def test_get_range_where_surah_track_missing_should_return_404(self):
         # Arrange: asset only has surah 1.
@@ -195,6 +196,7 @@ class RecitationRangeTest(BaseTestCase):
 
         # Assert
         self.assertEqual(404, response.status_code, response.content)
+        self.assertEqual("track_not_found", response.json()["error_name"])
 
     def test_get_range_where_quality_unknown_should_return_404(self):
         # Arrange

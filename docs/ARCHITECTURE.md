@@ -266,7 +266,7 @@ The **Publisher** represents an organization or individual who owns and uploads 
   - Portal checks use the `X-Tenant` publisher. Without it only global permissions apply, plus `portal_access` for users with an active membership, so leaving the header out never combines a user's roles across publishers
   - `GET /portal/publishers/me/` (the portal's tenant picker) needs only `portal_access`: it lists the caller's own memberships (staff see every publisher), each with the caller's effective `permissions` there. The portal gates its UI on the selected publisher's list. Each entry also carries `has_website`: true when the publisher has at least one `Domain` row (active or not), i.e. a website served through the tenant API
   - The profile's `permissions` (`GET /cms-api/auth/profile/`) is the union across all memberships, kept for display compatibility only
-  - Issue reports belong to their asset's publisher: list, retrieve, update and delete on `/portal/issue-reports/` and `/tenant/issue-reports/` see only reports in `request.publisher_q()` (404 `report_not_found` otherwise); a tenant request without a resolved domain sees none. Creating one stays open to any signed-in user, since the gallery reports on any asset without `X-Tenant`; with `X-Tenant` set the asset must belong to that publisher (404 `asset_not_found` otherwise). The portal form picks its asset from `GET /portal/issue-report-assets/` (the selected publisher's assets, searchable by name)
+  - Issue reports belong to their asset's publisher: list, retrieve, update and delete on `/portal/issue-reports/` see only reports in `request.publisher_q()` (404 `report_not_found` otherwise). The tenant API is create-only: `POST /tenant/issue-reports/` files a report from a publisher's website, and no tenant route reads, edits or deletes existing reports. Creating one stays open to any signed-in user, since the gallery reports on any asset without `X-Tenant`; with `X-Tenant` set the asset must belong to that publisher (404 `asset_not_found` otherwise). The portal form picks its asset from `GET /portal/issue-report-assets/` (the selected publisher's assets, searchable by name)
     - A report carries a `context` (JSON) pointing at where the issue is, validated per asset category by `apps.content.services.issue_context`. It is required on create for: recitation and text assets `{surah, ayah}` (surah 1–114, ayah within that surah), mushafs `{page}`, fonts `{page?, glyph?}` with at least one (page within the asset's `MushafLayout.page_count` when it has one, else 1–32767; glyph up to 32 characters). Other categories take none. A missing, incomplete or ill-fitting context returns 400 `invalid_issue_context`. On update, leaving `context` out keeps it (so reports from before this field, with a null context, can still change status or description); a sent context must be complete. Responses add `context_label` (e.g. "Al-Baqarah 2:255", "Page 12") in the request language; the status-change email shows it in the recipient's language
     - Reports have a comment thread (`ContentIssueReportComment`: report, author, body, created_at). `GET`/`POST /portal/issue-reports/{id}/comments/` list it oldest first and add to it, for anyone who can see the report there (404 `report_not_found` otherwise; 400 `comment_empty` / `comment_too_long` for a body that is blank after removing HTML or over 2000 characters). A comment from anyone but the reporter emails the reporter (`emails/issue_comment.html`, in their language) after commit. The portal shows the reporter's email to staff only (`reporter.email` is null for publisher members), so members reach reporters through comments. A deleted author leaves the comment with `author: null`
   - The profile's `is_staff` tells the frontend the caller is Itqan staff; it unlocks the cross-publisher usage reports (`/portal/admin/usage/`) and lets the legacy board pick any publisher (`GET /portal/usage/board-url/?publisher_id=`)
@@ -775,6 +775,8 @@ Every `Asset` carries four booleans, all `true` by default, that decide on which
 | `in_cli` | `itqan` CLI registry (`/packages/`) | catalog, resolve, download, and Dependabot dispatch |
 | `in_tenants` | Tenant API (`/tenant/`) | recitation list, recitation tracks, reciter/riwayah/qiraah lists |
 
+Restricted assets (`is_open_access=False`) need an approved access request on every surface that serves their content: the public track list, range and ayah endpoints, ayah text, the CLI registry, and the tenant track list (`/tenant/recitation-tracks/{id}/`), all through `enforce_asset_access_on_public_api` (401 `authentication_required` without a signed-in user or API key, 403 `access_denied` without a grant).
+
 The portal labels `in_tenants` "Publisher website" and offers its checkbox only when the asset's publisher has a website (`has_website` on `GET /portal/publishers/me/`). The API still accepts and stores `in_tenants` for a publisher without a domain: the value is kept as is, so it applies once a domain is added.
 
 ```mermaid
@@ -1031,8 +1033,12 @@ flowchart LR
 - **Routes:** public-API paths are matched against the developer API's own OpenAPI schema;
   portal, CMS and OAuth paths are dropped. The asset comes from the path (`{asset_id}` /
   `{slug}`), so `GET /ayahs/{ayah_key}/`, which names several text assets in `?assets=`, is
-  recorded as an API call with no asset; its per-asset usage is in the `track_usage` event
-  (`entity_type=text`, one `entity_ids` entry per served asset).
+  recorded as an API call with no asset.
+- **One event per request, whatever served it:** every request is counted from the edge log, so a
+  call answered from Cloudflare's cache, from Django's response cache, from the database or with a
+  `304` revalidation is the same `api_call` with the same `endpoint` (e.g. the track list is always
+  `/recitations/{asset_id}/` on its asset). The old per-handler `track_usage` events, which named
+  the track list `recitation_track` on a cache hit and `recitation` on a miss, are gone.
 
 ### Usage reports: API
 
