@@ -312,7 +312,8 @@ CORS_ALLOW_HEADERS = [
 
 # Browser clients cannot read a non-simple response header unless it is exposed, and the
 # advisory about a malformed X-Client-* header is useless if the developer cannot see it.
-CORS_EXPOSE_HEADERS = ["X-Itqan-Warning", "ETag"]
+# Deprecation, Sunset and Link carry the deprecation policy (docs-website api-design guide).
+CORS_EXPOSE_HEADERS = ["X-Itqan-Warning", "ETag", "Deprecation", "Sunset", "Link"]
 
 # Custom user model
 AUTH_USER_MODEL = "users.User"

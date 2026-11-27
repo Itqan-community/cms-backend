@@ -86,7 +86,34 @@ curl -i {{API_BASE}}/reciters/ -H 'If-None-Match: "3f2a…"'
 
 ## Backwards-Compatible Evolution
 
-The API evolves additively. New fields may appear in existing responses at any time; your client must ignore unknown fields rather than failing on them. Breaking changes — removed fields, changed types, renamed endpoints — are always introduced on a new path segment. An integration built against `/recitations/` today will keep working as new fields are added.
+The API evolves additively. These changes can ship at any time, without notice:
+
+- new endpoints, new optional query parameters and new fields in existing responses
+- new `error_name` values (treat an unknown one as a generic error)
+- new values in enum-like fields
+
+Your client must ignore unknown fields rather than fail on them. An integration built against `/recitations/` today keeps working as fields are added.
+
+## Deprecation Policy
+
+Paths are not versioned: there is no `/v1/` and none is planned. A breaking change (a removed or renamed field, endpoint or parameter, a changed type, status code or `error_name`) follows this policy instead:
+
+1. **Notice.** The change is announced in these docs at least **90 days** before it takes effect.
+2. **Headers.** During those 90 days the old behaviour keeps working, and every response it affects carries:
+   - `Deprecation: @<unix-timestamp>`: when the old behaviour was deprecated ([RFC 9745](https://www.rfc-editor.org/rfc/rfc9745))
+   - `Sunset: <HTTP-date>`: when it stops working ([RFC 8594](https://www.rfc-editor.org/rfc/rfc8594))
+   - `Link: <docs page>; rel="deprecation"`: where the change is described
+3. **The itqan CLI first.** A CLI release that handles the new behaviour ships before the old one is removed.
+4. **Removal.** After the `Sunset` date the old behaviour is gone.
+
+```http
+HTTP/1.1 200 OK
+Deprecation: @1798761600
+Sunset: Mon, 01 Mar 2027 00:00:00 GMT
+Link: <https://docs.example/docs/guides/api-design#deprecation-policy>; rel="deprecation"
+```
+
+CORS exposes all three headers, so browser code can read them. Log or alert on the `Deprecation` header in your client so you hear about a change before its sunset date. Security fixes, and fixes that make the API do what these docs already say, can ship without the 90-day window.
 
 ---
 
