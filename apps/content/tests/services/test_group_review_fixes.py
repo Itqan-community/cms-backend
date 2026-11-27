@@ -94,6 +94,28 @@ class GroupReviewFixTests(GroupQuranDataMixin, BaseTestCase):
         # Assert
         self.assertEqual(raised.exception.error_name, "orphaned_groups")
 
+    def test_restore_version_where_source_head_and_translation_are_file_only_should_restore(self):
+        # Arrange: both the source head and the old translation are legacy file-only
+        # versions covering 1:1→1:3, so the source's ranges come from its file.
+        from datetime import timedelta
+
+        from django.core.files.base import ContentFile
+        from django.utils import timezone
+
+        csv = b"from_surah,from_ayah,to_surah,to_ayah,text\n1,1,1,3,%s\n"
+        source_head = self._version(self.source, {}, name="1.0")
+        source_head.file_url.save("source.csv", ContentFile(csv % b"src"), save=True)
+        old = self._version(self.english, {}, name="1.0")
+        old.file_url.save("en.csv", ContentFile(csv % b"en"), save=True)
+        AssetVersion.objects.filter(pk=old.pk).update(created_at=timezone.now() - timedelta(hours=1))
+        self._version(self.english, {(1, 3): "en two"}, name="1.1")
+
+        # Act
+        restored = self.service.restore_version(self.asset.slug, CategoryChoice.TEXT, old.pk)
+
+        # Assert
+        self.assertEqual(["en"], list(restored.entries.values_list("text", flat=True)))
+
     def test_restore_version_where_source_language_should_reconstruct_snapshot_once(self):
         # Arrange — the orphan check does not apply to the source, so only the restore reads it
         old = self._version(self.source, {(1, 3): "src"}, name="1.0")

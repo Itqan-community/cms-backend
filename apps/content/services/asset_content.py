@@ -221,7 +221,9 @@ def source_group_keys(version: AssetVersion) -> set[int] | None:
     if head.entries.exists():
         # The head keeps its full entries: read only the ranges, never the text.
         return unit_spec_for(asset).stored_ranges(head, with_text=True)
-    return {unit_id for (unit_id, _key), text in AssetContentRepository().reconstruct_entries(head).items() if text}
+    # A legacy file-only head's ranges are in its own file, not in earlier versions.
+    snapshot = AssetContentRepository().reconstruct_entries_or_file(head)
+    return {unit_id for (unit_id, _key), text in snapshot.items() if text}
 
 
 def header_not_first_error() -> ItqanError:
