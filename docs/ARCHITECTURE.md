@@ -1033,8 +1033,12 @@ flowchart LR
 - **Routes:** public-API paths are matched against the developer API's own OpenAPI schema;
   portal, CMS and OAuth paths are dropped. The asset comes from the path (`{asset_id}` /
   `{slug}`), so `GET /ayahs/{ayah_key}/`, which names several text assets in `?assets=`, is
-  recorded as an API call with no asset; its per-asset usage is in the `track_usage` event
-  (`entity_type=text`, one `entity_ids` entry per served asset).
+  recorded as an API call with no asset.
+- **One event per request, whatever served it:** every request is counted from the edge log, so a
+  call answered from Cloudflare's cache, from Django's response cache, from the database or with a
+  `304` revalidation is the same `api_call` with the same `endpoint` (e.g. the track list is always
+  `/recitations/{asset_id}/` on its asset). The old per-handler `track_usage` events, which named
+  the track list `recitation_track` on a cache hit and `recitation` on a miss, are gone.
 
 ### Usage reports: API
 
