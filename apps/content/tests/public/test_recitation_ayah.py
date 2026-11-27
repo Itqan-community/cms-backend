@@ -90,7 +90,23 @@ class RecitationAyahAudioPublicApiTest(BaseTestCase):
         self.assertEqual(240000, data["size_bytes"])
         expected_suffix = f"uploads/assets/{self.asset.id}/recitations/{self.default_quality.id}/002/ayah_255.mp3"
         self.assertTrue(data["audio_url"].endswith(expected_suffix))
-        self.assertEqual("public, max-age=300, s-maxage=300", response.headers.get("Cache-Control"))
+        self.assertEqual("private, max-age=300", response.headers.get("Cache-Control"))
+
+    def test_get_ayah_audio_where_open_asset_should_never_let_shared_caches_store_the_response(self):
+        # Arrange: a shared (CDN) copy would outlive the asset being restricted.
+        url = f"/recitations/{self.asset.id}/ayah/2:255/"
+
+        # Act
+        cold = self.client.get(url)
+        warm = self.client.get(url)
+
+        # Assert
+        for response in (cold, warm):
+            self.assertEqual(200, response.status_code, response.content)
+            cache_control = response.headers.get("Cache-Control")
+            self.assertEqual("private, max-age=300", cache_control)
+            self.assertNotIn("public", cache_control)
+            self.assertNotIn("s-maxage", cache_control)
 
     def test_get_ayah_audio_where_quality_param_provided_should_resolve_variant_quality(self):
         """Verify that passing quality parameter resolves the variant quality's audio slice."""

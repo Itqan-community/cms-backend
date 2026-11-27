@@ -404,7 +404,24 @@ class RecitationTracksAccessControlTest(BaseTestCase):
         response = self.client.get(f"/recitations/{self.asset.id}/")
 
         self.assertEqual(200, response.status_code, response.content)
-        self.assertEqual("public, max-age=300, s-maxage=300", response.headers.get("Cache-Control"))
+        self.assertEqual("private, max-age=300", response.headers.get("Cache-Control"))
+
+    def test_open_access_asset_should_never_let_shared_caches_store_the_response(self):
+        # Arrange: a shared (CDN) copy would outlive the asset being restricted.
+        self.asset.is_open_access = True
+        self.asset.save(update_fields=["is_open_access"])
+
+        # Act
+        cold = self.client.get(f"/recitations/{self.asset.id}/")
+        warm = self.client.get(f"/recitations/{self.asset.id}/")
+
+        # Assert
+        for response in (cold, warm):
+            self.assertEqual(200, response.status_code, response.content)
+            cache_control = response.headers.get("Cache-Control")
+            self.assertEqual("private, max-age=300", cache_control)
+            self.assertNotIn("public", cache_control)
+            self.assertNotIn("s-maxage", cache_control)
 
     def test_restricted_asset_without_api_key_returns_401(self):
         response = self.client.get(f"/recitations/{self.asset.id}/")
