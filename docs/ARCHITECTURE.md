@@ -1159,6 +1159,14 @@ so a half-timed surah shows as partial. The denominator is only the surahs that 
 tracks (missing surahs are a separate gap). The recitation list sums every quality, so an
 untimed variant makes the recitation partial; the quality list shows each variant on its own.
 
+**Timing level.** The portal recitation list and detail, the gallery asset list and detail,
+and the `/packages/` catalog return `timing_level`: the finest timing a recitation has
+(`ayah`, `word` or `sentence`; `null` without timings), from `apps/content/timing_level.py`.
+Timings are stored per ayah only, so today it is `ayah` when the recitation has any
+`RecitationAyahTiming` row, else `null`; `word` and `sentence` are reserved for finer timings.
+It is read from an `Exists` annotation (or, on the portal list, from `timed_ayahs_count`), so a
+list adds no query per row. Consumer surfaces count only visible qualities; the portal counts all.
+
 **Ayah-timing exports.** `sync_asset_recitations_json_file` writes one `AssetVersion`
 per quality, named after the quality slug, so variants do not overwrite each other's JSON.
 

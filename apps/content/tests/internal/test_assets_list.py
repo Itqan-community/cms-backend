@@ -785,3 +785,30 @@ class ListAssetTest(BaseTestCase):
         self.assertEqual(200, response.status_code, response.content)
         self.assertEqual(4, len(response.json()["results"]))
         self.assertEqual(len(single.captured_queries), len(many.captured_queries))
+
+    # ── Timing level ──────────────────────────────────────────
+
+    def test_list_asset_where_recitation_has_ayah_timings_should_report_ayah_timing_level(self):
+        # Arrange
+        asset = self._make_recitation("Timed Recitation")
+        self._add_timing(asset.recitation_qualities.get(is_default=True))
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("ayah", response.json()["results"][0]["timing_level"])
+
+    def test_list_asset_where_ayah_timings_only_in_hidden_quality_should_report_null_timing_level(self):
+        # Arrange
+        asset = self._make_recitation("Hidden Timings Recitation")
+        hidden_quality = baker.make(RecitationQuality, asset=asset, name="Hidden", is_visible=False)
+        self._add_timing(hidden_quality)
+
+        # Act
+        response = self.client.get("/cms-api/assets/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertIsNone(response.json()["results"][0]["timing_level"])

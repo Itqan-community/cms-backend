@@ -8,6 +8,9 @@ from apps.content.models import (
     CategoryChoice,
     LicenseChoice,
     MushafLayout,
+    RecitationAyahTiming,
+    RecitationQuality,
+    RecitationSurahTrack,
     StatusChoice,
     UsageEvent,
     VersionStateChoice,
@@ -609,3 +612,45 @@ class DetailAssetAvailableLanguagesTest(BaseTestCase):
         response = self.client.get(f"/cms-api/assets/{self.asset.id}/", format="json")
 
         self.assertEqual([], response.json()["available_languages"])
+
+    # ── Timing level ──────────────────────────────────────────
+
+    def _timed_recitation(self, *, visible: bool = True) -> Asset:
+        asset = baker.make(
+            Asset,
+            name="Timed Recitation",
+            category=CategoryChoice.RECITATION,
+            reciter=baker.make("content.Reciter", name="Timed Reciter"),
+            riwayah=baker.make("content.Riwayah", name="Timed Riwayah"),
+            status=StatusChoice.READY,
+        )
+        quality = (
+            asset.recitation_qualities.get(is_default=True)
+            if visible
+            else baker.make(RecitationQuality, asset=asset, name="Hidden", is_visible=False)
+        )
+        track = baker.make(RecitationSurahTrack, asset=asset, quality=quality, surah_number=1, duration_ms=1000)
+        baker.make(RecitationAyahTiming, track=track, ayah_key="1:1", start_ms=0, end_ms=1000)
+        return asset
+
+    def test_detail_assets_where_recitation_has_ayah_timings_should_report_ayah_timing_level(self):
+        # Arrange
+        asset = self._timed_recitation()
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertEqual("ayah", response.json()["timing_level"])
+
+    def test_detail_assets_where_timings_only_in_hidden_quality_should_report_null_timing_level(self):
+        # Arrange
+        asset = self._timed_recitation(visible=False)
+
+        # Act
+        response = self.client.get(f"/cms-api/assets/{asset.id}/", format="json")
+
+        # Assert
+        self.assertEqual(200, response.status_code, response.content)
+        self.assertIsNone(response.json()["timing_level"])

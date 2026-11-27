@@ -5,7 +5,19 @@ from typing import TYPE_CHECKING
 
 from django.core.files.base import ContentFile
 from django.db import transaction
-from django.db.models import BooleanField, CharField, Exists, OuterRef, Prefetch, Q, QuerySet, Subquery, Value
+from django.db.models import (
+    BooleanField,
+    Case,
+    CharField,
+    Exists,
+    OuterRef,
+    Prefetch,
+    Q,
+    QuerySet,
+    Subquery,
+    Value,
+    When,
+)
 from django.utils import timezone
 
 from apps.content.models import (
@@ -16,6 +28,7 @@ from apps.content.models import (
     AssetVersion,
     AssetVersionChange,
     AssetVersionEntry,
+    CategoryChoice,
     StatusChoice,
     VersionStateChoice,
     consumer_visible_q,
@@ -23,6 +36,7 @@ from apps.content.models import (
 from apps.content.repositories.asset_content import AssetContentRepository
 from apps.content.repositories.asset_review import AssetReviewRepository
 from apps.content.services.asset_templates import unit_spec_for
+from apps.content.timing_level import has_ayah_timings_exists
 
 if TYPE_CHECKING:
     from django.contrib.auth.models import AnonymousUser
@@ -95,6 +109,15 @@ class PackageRegistryRepository:
             qs = qs.filter(tags__slug=tag)
         if exclude_categories:
             qs = qs.exclude(category__in=exclude_categories)
+        # `timing_level` in the catalog. Only recitations have timings, so the CASE skips
+        # the subquery on every other row.
+        qs = qs.annotate(
+            has_ayah_timings=Case(
+                When(category=CategoryChoice.RECITATION, then=has_ayah_timings_exists(visible_qualities_only=True)),
+                default=Value(False),
+                output_field=BooleanField(),
+            )
+        )
         # A tag filter or tag search joins the tags: an asset must still list once.
         return self._annotate_caller_access(qs.distinct(), user).order_by("slug")
 
